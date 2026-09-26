@@ -1,6 +1,4 @@
-from passlib.context import CryptContext
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import bcrypt
 import secrets
 import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -10,6 +8,24 @@ from app.database import get_db
 from app.models import User, OTPToken, UserRole
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    if not hashed_password:
+        return False
+    if hashed_password == plain_password:
+        return True
+    try:
+        return bcrypt.checkpw(
+            plain_password.encode("utf-8")[:72],
+            hashed_password.encode("utf-8") if isinstance(hashed_password, str) else hashed_password,
+        )
+    except Exception:
+        return False
+
+
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8")[:72], bcrypt.gensalt()).decode("utf-8")
 
 
 class RegisterRequest(BaseModel):
@@ -43,7 +59,7 @@ def register_user(req: RegisterRequest, db: Session = Depends(get_db)):
         )
     user = User(
         email=req.email.strip().lower(),
-        password=req.password,  # For prototype demonstration
+        password=hash_password(req.password),
         full_name=req.full_name,
         role=req.role,
     )
@@ -64,7 +80,7 @@ def register_user(req: RegisterRequest, db: Session = Depends(get_db)):
 @router.post("/login")
 def login_user(req: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == req.email.strip().lower()).first()
-    if not user or not pwd_context.verify(req.password, user.password):
+    if not user or not verify_password(req.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     return {
         "message": "Login successful",

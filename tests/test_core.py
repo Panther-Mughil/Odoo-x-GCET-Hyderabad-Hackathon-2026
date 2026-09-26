@@ -8,9 +8,7 @@ from main import app
 from app.database import Base, get_db
 from app.models import Product, Location, Warehouse, User, UserRole, ProductCategory
 from app.services.seeder import seed_database
-from passlib.context import CryptContext
-
-pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+from app.routers.auth import hash_password
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 engine = create_engine(
@@ -37,7 +35,7 @@ def setup_db():
     seed_database(db)
     
     # Manually seed a user for auth test
-    user = User(email="manager@stocksense.com", password=pwd_context.hash("admin"), full_name="Admin", role="inventory_manager")
+    user = User(email="manager@stocksense.com", password=hash_password("admin"), full_name="Admin", role="inventory_manager")
     db.add(user)
     
     # Manually seed a product for operation test
@@ -111,4 +109,26 @@ def test_insufficient_stock_delivery_wait_state():
     res_ready = client.post(f"/api/operations/{doc_id}/mark_ready")
     assert res_ready.status_code == 200
     assert res_ready.json()["status"] == "waiting"
+
+
+def test_alerts_and_auto_reorder():
+    db = TestingSessionLocal()
+    cat = db.query(ProductCategory).first()
+    low_prod = Product(sku="ALERT-01", name="Low Stock Item", category_id=cat.id, min_reorder_qty=20.0, target_stock_qty=100.0, cost_price=50.0)
+    db.add(low_prod)
+    db.commit()
+    db.refresh(low_prod)
+
+    res = client.get("/api/alerts/reorder-suggestions")
+    assert res.status_code == 200
+    suggestions = res.json()
+    assert isinstance(suggestions, list)
+    assert any(s["sku"] == "ALERT-01" for s in suggestions)
+    
+    # Auto reorder for the low stock product
+    reorder_res = client.post("/api/alerts/auto-reorder", json={"product_id": low_prod.id})
+    assert reorder_res.status_code == 200
+    data = reorder_res.json()
+    assert "doc_number" in data or "message" in data
+    assert data["reorder_quantity"] == 100.0
 

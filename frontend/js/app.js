@@ -1422,10 +1422,127 @@ function renderHistoryPage() {
 }
 
 // ==========================================================================
-// 11. Barcode Scanner Interface
+// 11. Barcode Scanner Interface & Live Camera
 // ==========================================================================
 
 let currentScannedSku = null;
+let scannerCameraStream = null;
+let scannerBarcodeInterval = null;
+let scannerDetector = null;
+
+async function startModalCameraScanner() {
+  const statusEl = document.getElementById('scannerCameraStatus');
+  const btn = document.getElementById('btnToggleScannerCamera');
+  const video = document.getElementById('scannerCameraVideo');
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    if (statusEl) statusEl.innerHTML = '<span style="color: var(--danger);">Camera API unsupported (use manual entry)</span>';
+    return;
+  }
+
+  if (statusEl) statusEl.textContent = 'Camera: Connecting...';
+
+  try {
+    // Try back/environment camera first
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false
+      });
+    } catch (e) {
+      // Fallback to any available video device
+      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    }
+
+    scannerCameraStream = stream;
+
+    if (video) {
+      video.srcObject = stream;
+      video.style.display = 'block';
+      await video.play().catch(e => console.warn('Video play prevented:', e));
+    }
+
+    if (btn) btn.textContent = '⏹ Stop Camera';
+    if (statusEl) statusEl.innerHTML = '<span style="color: var(--success); font-weight: 600;">● Live Camera Active</span>';
+
+    initLiveBarcodeDetection();
+  } catch (err) {
+    console.warn('Camera access denied or failed:', err);
+    if (statusEl) statusEl.innerHTML = '<span style="color: var(--text-muted);">Camera off (permission required)</span>';
+    if (btn) btn.textContent = '📷 Start Camera';
+    if (video) video.style.display = 'none';
+  }
+}
+
+function stopModalCameraScanner() {
+  if (scannerBarcodeInterval) {
+    clearInterval(scannerBarcodeInterval);
+    scannerBarcodeInterval = null;
+  }
+
+  if (scannerCameraStream) {
+    try {
+      scannerCameraStream.getTracks().forEach(track => {
+        try { track.stop(); } catch(e) {}
+      });
+    } catch (e) {}
+    scannerCameraStream = null;
+  }
+
+  const video = document.getElementById('scannerCameraVideo');
+  if (video) {
+    video.pause();
+    video.srcObject = null;
+    video.style.display = 'none';
+  }
+
+  const btn = document.getElementById('btnToggleScannerCamera');
+  if (btn) btn.textContent = '📷 Start Camera';
+
+  const statusEl = document.getElementById('scannerCameraStatus');
+  if (statusEl) statusEl.textContent = 'Camera: Inactive';
+}
+
+function toggleModalCameraScanner() {
+  if (scannerCameraStream) {
+    stopModalCameraScanner();
+  } else {
+    startModalCameraScanner();
+  }
+}
+
+function initLiveBarcodeDetection() {
+  if ('BarcodeDetector' in window) {
+    try {
+      if (!scannerDetector) {
+        scannerDetector = new BarcodeDetector({
+          formats: ['code_128', 'code_39', 'code_93', 'ean_13', 'ean_8', 'qr_code', 'upc_a', 'upc_e']
+        });
+      }
+
+      if (scannerBarcodeInterval) clearInterval(scannerBarcodeInterval);
+
+      scannerBarcodeInterval = setInterval(async () => {
+        const video = document.getElementById('scannerCameraVideo');
+        if (!video || !scannerCameraStream || video.readyState < 2) return;
+        try {
+          const barcodes = await scannerDetector.detect(video);
+          if (barcodes && barcodes.length > 0) {
+            const val = barcodes[0].rawValue?.trim();
+            if (val && val.toUpperCase() !== currentScannedSku) {
+              simulateScan(val);
+            }
+          }
+        } catch (err) {
+          // Frame read skip
+        }
+      }, 400);
+    } catch (err) {
+      console.log('Native BarcodeDetector not available:', err);
+    }
+  }
+}
 
 function openBarcodeScannerModal() {
   currentScannedSku = null;
@@ -1437,16 +1554,24 @@ function openBarcodeScannerModal() {
     setTimeout(() => input.focus(), 200);
   }
   openModal('barcodeScannerModal');
+  startModalCameraScanner();
 }
 
 function simulateScan(sku) {
-  const prod = store.getProducts().find(p => p.sku === sku);
+  if (!sku) return;
+  const rawSku = sku.trim().toUpperCase();
+  const prod = store.getProducts().find(p => 
+    p.sku.toUpperCase() === rawSku || 
+    p.id.toString() === rawSku || 
+    p.name.toUpperCase().includes(rawSku)
+  );
+
   if (!prod) {
-    alert(`SKU "${sku}" not found in inventory catalog.`);
+    showToast(`SKU "${sku}" not found in inventory catalog.`, 'warning');
     return;
   }
 
-  currentScannedSku = sku;
+  currentScannedSku = prod.sku;
   const resultCard = document.getElementById('scannerResultCard');
   if (!resultCard) return;
 
@@ -1454,20 +1579,37 @@ function simulateScan(sku) {
   document.getElementById('scannedProdSku').textContent = prod.sku;
   document.getElementById('scannedProdStock').textContent = prod.stock;
   document.getElementById('scannedProdLocation').textContent = `${prod.warehouse} / ${prod.location}`;
-  document.getElementById('scannedProdPrice').textContent = `₹${prod.price.toLocaleString('en-IN')}`;
+  document.getElementById('scannedProdPrice').textContent = `₹${(prod.price || 0).toLocaleString('en-IN')}`;
 
   resultCard.style.display = 'block';
 
-  // Play subtle feedback beep or flash
+  // Audio feedback using Web Audio API
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.15);
+  } catch(e) {}
+
+  // Visual laser flash feedback
   const laser = document.querySelector('.scanner-laser');
   if (laser) {
     laser.style.background = '#22c55e';
-    laser.style.boxShadow = '0 0 15px #22c55e';
+    laser.style.boxShadow = '0 0 16px #22c55e';
     setTimeout(() => {
       laser.style.background = '#ef4444';
       laser.style.boxShadow = '0 0 10px #ef4444';
-    }, 400);
+    }, 450);
   }
+
+  showToast(`Scanned: ${prod.name} (${prod.sku})`, 'success');
 }
 
 function handleScannerManualInput(e) {
@@ -1521,6 +1663,9 @@ function openModal(modalId) {
 }
 
 function closeModal(modalId) {
+  if (modalId === 'barcodeScannerModal') {
+    stopModalCameraScanner();
+  }
   const modal = document.getElementById(modalId);
   if (modal) modal.classList.remove('open');
 }
@@ -1528,6 +1673,9 @@ function closeModal(modalId) {
 // Close modal when clicking backdrop
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('modal-backdrop')) {
+    if (e.target.id === 'barcodeScannerModal') {
+      stopModalCameraScanner();
+    }
     e.target.classList.remove('open');
   }
 });
@@ -1612,7 +1760,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Esc key closes modals
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      document.querySelectorAll('.modal-backdrop.open').forEach(m => m.classList.remove('open'));
+      document.querySelectorAll('.modal-backdrop.open').forEach(m => {
+        if (m.id === 'barcodeScannerModal') {
+          stopModalCameraScanner();
+        }
+        m.classList.remove('open');
+      });
     }
   });
 });
