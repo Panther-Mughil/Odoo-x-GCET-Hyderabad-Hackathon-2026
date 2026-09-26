@@ -137,7 +137,7 @@ def reset_password(req: VerifyResetRequest, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="User account not found")
 
-    user.password = req.new_password
+    user.password = hash_password(req.new_password)
     record.is_used = 1
     db.commit()
     return {"message": "Password has been successfully updated"}

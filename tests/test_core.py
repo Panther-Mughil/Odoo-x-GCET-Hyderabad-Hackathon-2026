@@ -34,10 +34,6 @@ def setup_db():
     db = TestingSessionLocal()
     seed_database(db)
     
-    # Manually seed a user for auth test
-    user = User(email="manager@stocksense.com", password=hash_password("admin"), full_name="Admin", role="inventory_manager")
-    db.add(user)
-    
     # Manually seed a product for operation test
     cat = ProductCategory(name="Test Category")
     db.add(cat)

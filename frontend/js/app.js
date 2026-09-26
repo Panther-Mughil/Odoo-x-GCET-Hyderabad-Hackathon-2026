@@ -1833,12 +1833,357 @@ function handleGlobalSearch(query) {
 }
 
 // ==========================================================================
-// 15. Initialization on DOM Load
+// 15. Authentication System (Login, Register, OTP Password Reset, Session)
+// ==========================================================================
+
+const AuthManager = {
+  USER_KEY: 'stocksense_user',
+  TOKEN_KEY: 'stocksense_token',
+
+  init() {
+    this.updateSidebarUI();
+  },
+
+  getCurrentUser() {
+    try {
+      const saved = localStorage.getItem(this.USER_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    // Default logged in demo manager
+    return {
+      id: 1,
+      email: 'manager@stocksense.com',
+      full_name: 'Rajesh Sharma',
+      role: 'inventory_manager'
+    };
+  },
+
+  getToken() {
+    return localStorage.getItem(this.TOKEN_KEY) || 'bearer-1-inventory_manager';
+  },
+
+  isLoggedIn() {
+    return !!localStorage.getItem(this.TOKEN_KEY);
+  },
+
+  setUserSession(user, token) {
+    if (user) localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+    if (token) localStorage.setItem(this.TOKEN_KEY, token);
+    this.updateSidebarUI();
+  },
+
+  clearUserSession() {
+    localStorage.removeItem(this.USER_KEY);
+    localStorage.removeItem(this.TOKEN_KEY);
+    this.updateSidebarUI();
+  },
+
+  updateSidebarUI() {
+    const user = this.getCurrentUser();
+    const avatarEl = document.getElementById('sidebarUserAvatar');
+    const nameEl = document.getElementById('sidebarUserName');
+    const roleEl = document.getElementById('sidebarUserRole');
+    const logoutBtn = document.getElementById('sidebarLogoutBtn');
+
+    if (!user) {
+      if (avatarEl) avatarEl.textContent = '?';
+      if (nameEl) nameEl.textContent = 'Guest User';
+      if (roleEl) roleEl.textContent = 'Click to Sign In';
+      if (logoutBtn) logoutBtn.title = 'Sign In';
+      return;
+    }
+
+    if (avatarEl) {
+      const initials = (user.full_name || user.email || 'U')
+        .split(' ')
+        .map(n => n[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase();
+      avatarEl.textContent = initials || 'U';
+    }
+
+    if (nameEl) nameEl.textContent = user.full_name || user.email;
+    if (roleEl) {
+      const roleName = (user.role === 'inventory_manager') ? 'Inventory Manager' : 'Warehouse Staff';
+      roleEl.textContent = roleName;
+    }
+    if (logoutBtn) logoutBtn.title = 'Logout / Switch Account';
+  },
+
+  async login(email, password) {
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password: password.trim() })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || 'Invalid email or password');
+      }
+
+      this.setUserSession(data.user, data.token);
+      closeModal('authModal');
+      showToast(`Welcome back, ${data.user.full_name}!`, 'success');
+      return true;
+    } catch (err) {
+      showToast(err.message || 'Login failed', 'danger');
+      return false;
+    }
+  },
+
+  async register(fullName, email, password, role) {
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: fullName.trim(),
+          email: email.trim().toLowerCase(),
+          password: password.trim(),
+          role: role
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || 'Registration failed');
+      }
+
+      showToast('Registration successful! Signing in...', 'success');
+      // Auto-login newly registered account
+      await this.login(email, password);
+      return true;
+    } catch (err) {
+      showToast(err.message || 'Registration failed', 'danger');
+      return false;
+    }
+  },
+
+  async requestOTP(email) {
+    try {
+      const res = await fetch('/api/auth/request-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase() })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || 'Failed to generate OTP');
+      }
+
+      // Show OTP Preview Banner in Demo
+      const banner = document.getElementById('otpPreviewBanner');
+      const display = document.getElementById('otpCodeDisplay');
+      if (banner && display && data.otp_preview) {
+        display.textContent = data.otp_preview;
+        banner.style.display = 'flex';
+      }
+
+      const verifyForm = document.getElementById('verifyOtpForm');
+      if (verifyForm) verifyForm.style.display = 'block';
+
+      const otpInput = document.getElementById('resetOtpCode');
+      if (otpInput && data.otp_preview) {
+        otpInput.value = data.otp_preview;
+      }
+
+      showToast('OTP code sent to email (previewed below)', 'info');
+      return true;
+    } catch (err) {
+      showToast(err.message || 'Email not found', 'danger');
+      return false;
+    }
+  },
+
+  async resetPassword(email, otp, newPassword) {
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          otp: otp.trim(),
+          new_password: newPassword.trim()
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || 'Password reset failed');
+      }
+
+      showToast('Password updated successfully! You can now sign in.', 'success');
+      switchAuthTab('login');
+      const loginEmail = document.getElementById('loginEmail');
+      if (loginEmail) loginEmail.value = email;
+      return true;
+    } catch (err) {
+      showToast(err.message || 'Failed to reset password', 'danger');
+      return false;
+    }
+  },
+
+  logout() {
+    this.clearUserSession();
+    showToast('Logged out successfully.', 'info');
+    openAuthModal('login');
+  }
+};
+
+function openAuthModal(tab = 'login') {
+  switchAuthTab(tab);
+  openModal('authModal');
+}
+
+function handleAuthAction() {
+  if (AuthManager.isLoggedIn()) {
+    if (confirm('Log out of current StockSense session?')) {
+      AuthManager.logout();
+    }
+  } else {
+    openAuthModal('login');
+  }
+}
+
+function switchAuthTab(tab) {
+  const loginTab = document.getElementById('tabAuthLogin');
+  const regTab = document.getElementById('tabAuthRegister');
+  const resetTab = document.getElementById('tabAuthReset');
+
+  const loginForm = document.getElementById('loginForm');
+  const regForm = document.getElementById('registerForm');
+  const resetForm = document.getElementById('resetForm');
+
+  const titleEl = document.getElementById('authModalTitle');
+  const subtitleEl = document.getElementById('authModalSubtitle');
+
+  if (loginTab) loginTab.classList.toggle('active', tab === 'login');
+  if (regTab) regTab.classList.toggle('active', tab === 'register');
+  if (resetTab) resetTab.classList.toggle('active', tab === 'reset');
+
+  if (loginForm) loginForm.style.display = tab === 'login' ? 'block' : 'none';
+  if (regForm) regForm.style.display = tab === 'register' ? 'block' : 'none';
+  if (resetForm) resetForm.style.display = tab === 'reset' ? 'block' : 'none';
+
+  if (tab === 'login') {
+    if (titleEl) titleEl.textContent = 'Sign In to StockSense';
+    if (subtitleEl) subtitleEl.textContent = 'Access real-time inventory operations';
+  } else if (tab === 'register') {
+    if (titleEl) titleEl.textContent = 'Create StockSense Account';
+    if (subtitleEl) subtitleEl.textContent = 'Set up your inventory profile';
+  } else if (tab === 'reset') {
+    if (titleEl) titleEl.textContent = 'Reset Account Password';
+    if (subtitleEl) subtitleEl.textContent = 'Verify via 6-digit OTP code';
+  }
+}
+
+function quickFillLogin(email, password) {
+  const eInput = document.getElementById('loginEmail');
+  const pInput = document.getElementById('loginPassword');
+  if (eInput) eInput.value = email;
+  if (pInput) pInput.value = password;
+}
+
+function togglePasswordVisibility(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '🔒';
+  } else {
+    input.type = 'password';
+    btn.textContent = '👁';
+  }
+}
+
+async function handleLoginSubmit(e) {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value;
+  const pass = document.getElementById('loginPassword').value;
+  const btn = document.getElementById('btnLoginSubmit');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Signing in...';
+  }
+  try {
+    await AuthManager.login(email, pass);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Sign In';
+    }
+  }
+}
+
+async function handleRegisterSubmit(e) {
+  e.preventDefault();
+  const name = document.getElementById('registerFullName').value;
+  const email = document.getElementById('registerEmail').value;
+  const role = document.getElementById('registerRole').value;
+  const pass = document.getElementById('registerPassword').value;
+  const btn = document.getElementById('btnRegisterSubmit');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Creating account...';
+  }
+  try {
+    await AuthManager.register(name, email, pass, role);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Create Account';
+    }
+  }
+}
+
+async function handleRequestOtpSubmit(e) {
+  e.preventDefault();
+  const email = document.getElementById('resetEmail').value;
+  const btn = document.getElementById('btnSendOtp');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Sending OTP...';
+  }
+  try {
+    await AuthManager.requestOTP(email);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '📨 Send Verification OTP';
+    }
+  }
+}
+
+async function handleResetPasswordSubmit(e) {
+  e.preventDefault();
+  const email = document.getElementById('resetEmail').value;
+  const otp = document.getElementById('resetOtpCode').value;
+  const newPass = document.getElementById('resetNewPassword').value;
+  const btn = document.getElementById('btnConfirmReset');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Updating password...';
+  }
+  try {
+    await AuthManager.resetPassword(email, otp, newPass);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Confirm Password Update';
+    }
+  }
+}
+
+// ==========================================================================
+// 16. Initialization on DOM Load
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize Theme System
   ThemeManager.init();
+
+  // Initialize Auth System
+  AuthManager.init();
 
   // Check hash on load
   const hash = window.location.hash.replace('#', '');

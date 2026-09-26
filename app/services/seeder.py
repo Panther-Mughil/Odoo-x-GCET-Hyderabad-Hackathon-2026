@@ -1,12 +1,30 @@
 from sqlalchemy.orm import Session
-from app.models import Warehouse, Location
+from app.models import Warehouse, Location, User, UserRole
+from app.routers.auth import hash_password
 
 def seed_database(db: Session):
-    # Check if infrastructure is already seeded
+    # 1. Seed initial users if none exist
+    if not db.query(User).filter(User.email == "manager@stocksense.com").first():
+        manager = User(
+            email="manager@stocksense.com",
+            password=hash_password("admin"),
+            full_name="Rajesh Sharma",
+            role=UserRole.MANAGER,
+        )
+        staff = User(
+            email="staff@stocksense.com",
+            password=hash_password("admin"),
+            full_name="Priya Patel",
+            role=UserRole.STAFF,
+        )
+        db.add_all([manager, staff])
+        db.commit()
+
+    # 2. Check if infrastructure is already seeded
     if db.query(Warehouse).first():
         return
 
-    # 1. Structural Warehouse & Locations (Required for the app to function)
+    # 3. Structural Warehouse & Locations (Required for the app to function)
     wh = Warehouse(code="WH1", name="Main Warehouse", address="123 Tech Park")
     db.add(wh)
     db.commit()
@@ -20,4 +38,4 @@ def seed_database(db: Session):
     ]
     db.add_all(locs)
     db.commit()
-    print("Database structural seeding complete (No dummy data added).")
+    print("Database structural seeding complete.")
