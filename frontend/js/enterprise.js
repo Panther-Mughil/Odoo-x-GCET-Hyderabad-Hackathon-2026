@@ -27,10 +27,10 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("auth-container").style.display = "none";
     document.getElementById("authenticated-app").style.display = "flex";
     
-    const profileName = document.getElementById("userProfileName");
-    const profileRole = document.getElementById("userProfileRole");
-    if(profileName) profileName.textContent = state.currentUser.full_name;
-    if(profileRole) profileRole.textContent = state.currentUser.role.replace('_', ' ').toUpperCase();
+    const profileName = document.getElementById("userNameDisplay");
+    const profileRole = document.getElementById("userRoleDisplay");
+    if(profileName) profileName.textContent = state.currentUser.full_name || state.currentUser.name;
+    if(profileRole && state.currentUser.role) profileRole.textContent = state.currentUser.role.replace('_', ' ').toUpperCase();
     
     if (state.currentUser.role === "admin" || state.currentUser.role === "inventory_manager") {
       const adminNav = document.getElementById("nav-admin");
@@ -867,21 +867,7 @@ async function submitCreateProduct() {
 }
 
 
-function toggleUserRole() {
-  if (state.currentUser.role === 'Inventory Manager') {
-    setDemoUser('Jordan Cole', 'Warehouse Staff');
-  } else {
-    setDemoUser('Alex Vance', 'Inventory Manager');
-  }
-}
 
-function setDemoUser(name, role) {
-  state.currentUser = { name, role };
-  document.getElementById("userNameDisplay").innerText = name;
-  document.getElementById("userRoleDisplay").innerText = role;
-  document.getElementById("avatarLetter").innerText = name.charAt(0);
-  closeModal('modalAuth');
-}
 
 async function requestOTP() {
   const email = document.getElementById("otpEmailInput").value.trim();
