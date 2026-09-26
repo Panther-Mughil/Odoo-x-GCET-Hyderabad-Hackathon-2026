@@ -652,7 +652,10 @@
             <h2>Product Catalog & Inventory Valuation</h2>
             <p>Comprehensive SKU repository, unit costs, safety stocks and real-time on-hand rack balances.</p>
           </div>
-          <button class="btn btn-primary" onclick="openCreateProductModal()">+ Create Product</button>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-default" onclick="exportStockAuditCSV()">📥 Export Audit CSV</button>
+            <button class="btn btn-primary" onclick="openCreateProductModal()">+ Create Product</button>
+          </div>
         </div>
 
         <div class="card">
@@ -686,14 +689,19 @@
             <h2>Mobile-First Barcode Floor Scanner</h2>
             <p>High-speed optical scanning simulation for picking, receiving, rack verification and cycle counts.</p>
           </div>
+          <button class="btn btn-default" id="btnToggleCamera" onclick="toggleCameraScanner()">📷 Start Live Camera</button>
         </div>
 
         <div style="max-width: 680px; margin: 0 auto;">
           <div class="scanner-viewport">
             <div class="laser-line"></div>
-            <div style="font-size: 42px; margin-bottom: 8px;">📷</div>
-            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 4px;">Aim Barcode at Camera</h3>
-            <p style="font-size: 12.5px; color: #94a3b8;">Supports UPC-A, Code128, EAN-13, and custom alphanumeric SKU codes</p>
+            <video id="cameraScannerVideo" autoplay playsinline muted style="display: none; width: 100%; max-height: 240px; object-fit: cover; border-radius: var(--radius-sm); margin-bottom: 12px;"></video>
+            <div id="cameraPlaceholderIcon">
+              <div style="font-size: 42px; margin-bottom: 8px;">📷</div>
+              <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 4px;">Aim Barcode at Camera</h3>
+              <p style="font-size: 12.5px; color: #94a3b8;">Supports UPC-A, Code128, EAN-13, and custom alphanumeric SKU codes</p>
+            </div>
+            <div id="cameraStatusMsg" style="display: none; font-size: 12px; margin-top: 8px; color: #38bdf8;"></div>
           </div>
 
           <div class="card" style="padding: 24px;">

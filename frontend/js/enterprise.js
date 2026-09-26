@@ -1,5 +1,7 @@
 let healthDonutChart = null;
 let movementChart = null;
+let cameraStream = null;
+let barcodeScanInterval = null;
 
 let state = {
   currentView: 'dashboard',
@@ -9,15 +11,7 @@ let state = {
   operations: [],
   ledger: [],
   warehouses: [],
-  alerts: [
-    { name: "Wireless Optical Mouse", sku: "WM-1042", current: 12, min: 50, target: 120, cost: 650, status: "Critical", vendor: "Prime Electronics" },
-    { name: "USB-C Multiport Hub", sku: "HUB-2201", current: 28, min: 40, target: 80, cost: 1200, status: "Low", vendor: "TechSource India" },
-    { name: "M8 Industrial Bolts", sku: "BLT-M8-100", current: 8, min: 15, target: 80, cost: 15, status: "Low", vendor: "Chennai Components" },
-    { name: "Structural Steel Rods", sku: "STL-100-KG", current: 77, min: 20, target: 150, cost: 45, status: "Healthy", vendor: "ArcelorMittal Ltd" },
-    { name: "Ergonomic Warehouse Chairs", sku: "CHR-ERG-BLK", current: 18, min: 5, target: 25, cost: 3200, status: "Healthy", vendor: "Metro Supplies" },
-    { name: "Barcode Handheld Scanner", sku: "SCN-BT-09", current: 3, min: 10, target: 30, cost: 4500, status: "Critical", vendor: "Prime Electronics" },
-    { name: "Thermal Label Rolls (500pk)", sku: "LBL-THM-500", current: 14, min: 30, target: 100, cost: 380, status: "Low", vendor: "Metro Supplies" }
-  ],
+  alerts: [],
   auditLogs: [
     { time: "Just now", user: "Alex Vance", action: "Validated Delivery DEL-2026-0001", entity: "Metro Frame Works", delta: "-20 kg Steel", location: "WH2/Production Rack", ip: "192.168.1.42" },
     { time: "14 mins ago", user: "Jordan Cole", action: "Internal Movement INT-2026-0001", entity: "Production Replenishment", delta: "50 kg Steel", location: "WH1/Store → WH2/Rack", ip: "192.168.1.108" },
@@ -54,8 +48,16 @@ function navigate(viewName) {
     breadcrumb.innerText = capitalizeFirst(viewName);
   }
 
+  // Stop camera if user navigates away from scanner view
+  if (viewName !== 'scanner') {
+    stopCameraScanner();
+  }
+
   // Refresh data for the active view
-  if (viewName === 'dashboard') loadDashboardKPIs();
+  if (viewName === 'dashboard') {
+    loadDashboardKPIs();
+    renderDashboardAlertsTable();
+  }
   if (viewName === 'products') renderProductsTable();
   if (viewName === 'receipts') renderReceiptsTable();
   if (viewName === 'deliveries') renderDeliveriesTable();
@@ -78,7 +80,8 @@ async function loadAllData() {
     fetchProducts(),
     fetchOperations(),
     fetchLedger(),
-    fetchTopology()
+    fetchTopology(),
+    fetchAlerts()
   ]);
   populateModalDropdowns();
 }
@@ -95,7 +98,7 @@ async function loadDashboardKPIs() {
     document.getElementById("kpiPendingReceipts").innerText = data.pending_receipts;
     document.getElementById("kpiPendingDeliveries").innerText = data.pending_deliveries;
   } catch (e) {
-    console.error(e);
+    console.error("Failed to load dashboard KPIs:", e);
   }
 }
 
@@ -107,7 +110,7 @@ async function fetchProducts() {
     renderProductsTable();
     populateModalDropdowns();
   } catch (e) {
-    console.error(e);
+    console.error("Failed to fetch products:", e);
   }
 }
 
@@ -121,7 +124,7 @@ async function fetchOperations() {
     renderTransfersTable();
     renderAdjustmentsTable();
   } catch (e) {
-    console.error(e);
+    console.error("Failed to fetch operations:", e);
   }
 }
 
@@ -132,7 +135,7 @@ async function fetchLedger() {
     state.ledger = await res.json();
     renderLedgerTable();
   } catch (e) {
-    console.error(e);
+    console.error("Failed to fetch ledger:", e);
   }
 }
 
@@ -143,7 +146,28 @@ async function fetchTopology() {
     state.warehouses = await res.json();
     renderWarehouseTopology();
   } catch (e) {
-    console.error(e);
+    console.error("Failed to fetch topology:", e);
+  }
+}
+
+async function fetchAlerts() {
+  try {
+    const res = await fetch("/api/alerts/reorder-suggestions");
+    if (!res.ok) return;
+    state.alerts = await res.json();
+    updateSidebarBadge();
+    renderReorderTable();
+    renderDashboardAlertsTable();
+  } catch (e) {
+    console.error("Failed to fetch reorder alerts:", e);
+  }
+}
+
+function updateSidebarBadge() {
+  const badge = document.getElementById("sidebar-reorder-count");
+  if (badge) {
+    badge.innerText = state.alerts.length;
+    badge.style.display = state.alerts.length > 0 ? "inline-block" : "none";
   }
 }
 
@@ -255,7 +279,7 @@ function renderProductsTable() {
       <td><code style="font-weight: 700; color: #1e40af;">${p.sku}</code></td>
       <td><strong>${p.name}</strong></td>
       <td><span class="badge badge-default">${p.category}</span></td>
-      <td>₹${p.cost_price ? p.cost_price.toLocaleString('en-IN') : '450'}</td>
+      <td>₹${p.cost_price ? Number(p.cost_price).toLocaleString('en-IN') : '0'}</td>
       <td><strong>${p.on_hand}</strong> <span style="font-size: 11px; color: var(--text-muted);">${p.uom}</span></td>
       <td>${p.min_reorder_qty} ${p.uom}</td>
       <td>${p.target_stock_qty} ${p.uom}</td>
@@ -275,6 +299,9 @@ function renderReceiptsTable() {
   tbody.innerHTML = "";
   const receipts = state.operations.filter(o => o.doc_type === 'receipt');
   receipts.forEach(r => {
+    const isDone = r.status.toLowerCase() === 'done';
+    const badgeClass = isDone ? 'badge-success' : 'badge-warning';
+
     const tr = document.createElement("tr");
     tr.className = "clickable";
     tr.onclick = () => openDocDrawer(r);
@@ -284,9 +311,9 @@ function renderReceiptsTable() {
       <td>${r.items.map(i => `${i.product_name} (${i.sku})`).join(", ")}</td>
       <td><strong>${r.items.reduce((acc, curr) => acc + curr.quantity, 0)} units</strong></td>
       <td><code>${r.dest_location}</code></td>
-      <td><span class="badge badge-success">${r.status.toUpperCase()}</span></td>
+      <td><span class="badge ${badgeClass}">${r.status.toUpperCase()}</span></td>
       <td style="color: var(--text-muted); font-size: 12px;">${r.created_at}</td>
-      <td><button class="btn btn-sm btn-default" onclick="event.stopPropagation(); openDocDrawer('${r.doc_number}')">View</button></td>
+      <td><button class="btn btn-sm btn-default" onclick="event.stopPropagation(); openDocDrawer('${r.doc_number}')">${isDone ? 'View' : '⚡ Validate'}</button></td>
     `;
     tbody.appendChild(tr);
   });
@@ -299,6 +326,9 @@ function renderDeliveriesTable() {
   tbody.innerHTML = "";
   const deliveries = state.operations.filter(o => o.doc_type === 'delivery');
   deliveries.forEach(d => {
+    const isDone = d.status.toLowerCase() === 'done';
+    const badgeClass = isDone ? 'badge-success' : 'badge-warning';
+
     const tr = document.createElement("tr");
     tr.className = "clickable";
     tr.onclick = () => openDocDrawer(d);
@@ -312,7 +342,7 @@ function renderDeliveriesTable() {
           <span>✓ Picked</span> <span>→</span> <span>✓ Packed</span> <span>→</span> <span>✓ Validated</span>
         </div>
       </td>
-      <td><span class="badge badge-success">${d.status.toUpperCase()}</span></td>
+      <td><span class="badge ${badgeClass}">${d.status.toUpperCase()}</span></td>
       <td><button class="btn btn-sm btn-default" onclick="event.stopPropagation(); openDocDrawer('${d.doc_number}')">Details</button></td>
     `;
     tbody.appendChild(tr);
@@ -398,26 +428,92 @@ function renderReorderTable() {
   if (!tbody) return;
 
   tbody.innerHTML = "";
+  if (!state.alerts || state.alerts.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">All inventory levels are optimal. No replenishment required.</td></tr>`;
+    return;
+  }
+
   state.alerts.forEach(a => {
-    const needed = Math.max(0, a.target - a.current);
-    const estCost = (needed * a.cost).toLocaleString('en-IN');
-    let badgeClass = a.status === 'Critical' ? 'badge-danger' : (a.status === 'Low' ? 'badge-warning' : 'badge-success');
+    const prodId = a.product_id || a.id;
+    const isCritical = a.urgency === 'CRITICAL' || a.on_hand <= 0;
+    const estCost = Number(a.estimated_cost || 0).toLocaleString('en-IN');
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td><strong>${a.name}</strong></td>
+      <td><strong>${a.product_name || a.name}</strong></td>
       <td><code>${a.sku}</code></td>
-      <td><strong style="color: ${a.status === 'Critical' ? 'var(--danger)' : 'var(--text-main)'};">${a.current} units</strong></td>
-      <td>${a.min} units</td>
-      <td>${a.target} units</td>
-      <td><strong style="color: #2563eb;">+${needed} units</strong></td>
+      <td><strong style="color: ${isCritical ? 'var(--danger)' : 'var(--warning)'};">${a.on_hand} ${a.uom}</strong></td>
+      <td>${a.min_reorder_qty} ${a.uom}</td>
+      <td>${a.target_stock_qty} ${a.uom}</td>
+      <td><strong style="color: #2563eb;">+${a.suggested_purchase_qty} ${a.uom}</strong></td>
       <td>₹${estCost}</td>
       <td>
-        <button class="btn btn-sm btn-primary" onclick="quickReorderProduct('${a.sku}', ${needed})">⚡ Auto-PO</button>
+        <button class="btn btn-sm btn-primary" id="btn-reorder-${prodId}" onclick="quickReorderProduct(${prodId})">⚡ Auto-PO</button>
       </td>
     `;
     tbody.appendChild(tr);
   });
+}
+
+function renderDashboardAlertsTable() {
+  const tbody = document.getElementById("dashboardAlertsTable");
+  if (!tbody) return;
+
+  tbody.innerHTML = "";
+  if (!state.alerts || state.alerts.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 16px;">All stock levels optimal.</td></tr>`;
+    return;
+  }
+
+  const topAlerts = state.alerts.slice(0, 5);
+  topAlerts.forEach(a => {
+    const isCritical = a.urgency === 'CRITICAL' || a.on_hand <= 0;
+    const badgeClass = isCritical ? 'badge-danger' : 'badge-warning';
+
+    const tr = document.createElement("tr");
+    tr.className = "clickable";
+    tr.onclick = () => navigate('reorder');
+    tr.innerHTML = `
+      <td><strong>${a.product_name || a.name}</strong></td>
+      <td><code>${a.sku}</code></td>
+      <td><strong style="color: ${isCritical ? 'var(--danger)' : 'var(--warning)'};">${a.on_hand}</strong></td>
+      <td>${a.min_reorder_qty}</td>
+      <td><span class="badge ${badgeClass}">${a.urgency || (isCritical ? 'Critical' : 'Low')}</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function quickReorderProduct(productId) {
+  const btn = document.getElementById(`btn-reorder-${productId}`);
+  if (btn) {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.innerText = "⏳ Ordering...";
+  }
+
+  try {
+    const res = await fetch("/api/alerts/auto-reorder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ product_id: productId })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert(`Auto-Reorder Successful!\nCreated Draft Receipt: ${data.doc_number}\nReplenishment Qty: ${data.reorder_quantity} ${data.uom}`);
+      await loadAllData();
+      navigate('receipts');
+    } else {
+      alert(`Auto-Reorder Failed: ${data.detail || 'Could not place reorder'}`);
+    }
+  } catch (err) {
+    alert(`Network Error: ${err.message}`);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = "⚡ Auto-PO";
+    }
+  }
 }
 
 function renderWarehouseTopology() {
@@ -538,7 +634,7 @@ function openProductDrawer(p) {
       </div>
       <div class="card" style="padding: 12px;">
         <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">VALUATION (EST)</span>
-        <div style="font-size: 20px; font-weight: 700;">₹${((p.cost_price || 450) * p.on_hand).toLocaleString('en-IN')}</div>
+        <div style="font-size: 20px; font-weight: 700;">₹${((p.cost_price || 0) * p.on_hand).toLocaleString('en-IN')}</div>
       </div>
     </div>
 
@@ -564,14 +660,32 @@ function openProductDrawer(p) {
 }
 
 function openDocDrawer(docOrId) {
-  let doc = typeof docOrId === 'object' ? docOrId : state.operations.find(o => o.doc_number === docOrId);
+  let doc = typeof docOrId === 'object' ? docOrId : state.operations.find(o => o.doc_number === docOrId || o.id === docOrId);
   if (!doc) return;
+
+  const isReceipt = doc.doc_type === 'receipt';
+  const isDelivery = doc.doc_type === 'delivery';
+  const isDraftOrReady = doc.status.toLowerCase() !== 'done' && doc.status.toLowerCase() !== 'canceled';
+
+  let validateBtnHtml = '';
+  if (isDraftOrReady) {
+    if (isReceipt) {
+      validateBtnHtml = `<button class="btn btn-primary" style="margin-top: 14px; width: 100%; justify-content: center;" onclick="validateReceiptDoc(${doc.id})">✅ Validate Receipt (Receive Goods into Stock)</button>`;
+    } else if (isDelivery) {
+      validateBtnHtml = `<button class="btn btn-primary" style="margin-top: 14px; width: 100%; justify-content: center;" onclick="validateReceiptDoc(${doc.id})">✅ Validate Delivery (Dispatch from Stock)</button>`;
+    } else {
+      validateBtnHtml = `<button class="btn btn-primary" style="margin-top: 14px; width: 100%; justify-content: center;" onclick="validateReceiptDoc(${doc.id})">✅ Validate Operation</button>`;
+    }
+  }
 
   document.getElementById("drawerTitle").innerText = `Document: ${doc.doc_number}`;
   const body = document.getElementById("drawerBody");
   body.innerHTML = `
     <div style="margin-bottom: 16px;">
-      <span class="badge badge-success" style="margin-bottom: 8px;">STATUS: ${doc.status.toUpperCase()}</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span class="badge ${doc.status.toLowerCase() === 'done' ? 'badge-success' : 'badge-warning'}">STATUS: ${doc.status.toUpperCase()}</span>
+        <button class="btn btn-sm btn-default" onclick="printOperationVoucher('${doc.doc_number}')">🖨️ Print Voucher</button>
+      </div>
       <h3 style="font-size: 16px; font-weight: 700;">${doc.doc_type.toUpperCase()} ORDER</h3>
       <p style="font-size: 13px; color: var(--text-muted);">Partner / Reason: <strong>${doc.partner_name}</strong></p>
     </div>
@@ -591,17 +705,137 @@ function openDocDrawer(docOrId) {
         </div>
       `).join("")}
     </div>
+
+    ${validateBtnHtml}
   `;
   document.getElementById("detailDrawerBackdrop").classList.add("active");
   document.getElementById("detailDrawerPanel").classList.add("active");
 }
 
-function closeDrawer() {
-  document.getElementById("detailDrawerBackdrop").classList.remove("active");
-  document.getElementById("detailDrawerPanel").classList.remove("active");
+async function validateReceiptDoc(docId) {
+  try {
+    const res = await fetch(`/api/operations/${docId}/validate`, {
+      method: "POST"
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert(`Success: ${data.message}`);
+      closeDrawer();
+      await loadAllData();
+    } else {
+      alert(`Validation Error: ${data.detail || 'Failed to validate document'}`);
+    }
+  } catch (e) {
+    alert(`Network Error: ${e.message}`);
+  }
 }
 
-// 5. Barcode Scanner Simulation
+function closeDrawer() {
+  document.getElementById("detailDrawerBackdrop")?.classList.remove("active");
+  document.getElementById("detailDrawerPanel")?.classList.remove("active");
+}
+
+// 5. Live Camera & Barcode Scanner
+async function toggleCameraScanner() {
+  if (cameraStream) {
+    stopCameraScanner();
+  } else {
+    await startCameraScanner();
+  }
+}
+
+async function startCameraScanner() {
+  const video = document.getElementById("cameraScannerVideo");
+  const placeholder = document.getElementById("cameraPlaceholderIcon");
+  const statusMsg = document.getElementById("cameraStatusMsg");
+  const btn = document.getElementById("btnToggleCamera");
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    alert("Camera API is not supported on this browser/device. Please use manual SKU lookup below.");
+    return;
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" }
+    });
+    cameraStream = stream;
+    if (video) {
+      video.srcObject = stream;
+      video.style.display = "block";
+    }
+    if (placeholder) placeholder.style.display = "none";
+    if (statusMsg) {
+      statusMsg.style.display = "block";
+      statusMsg.innerText = "Camera active: Align barcode in center";
+    }
+    if (btn) btn.innerText = "🛑 Stop Camera";
+
+    // Setup native BarcodeDetector if supported
+    if ('BarcodeDetector' in window) {
+      try {
+        const supported = await BarcodeDetector.getSupportedFormats();
+        const detector = new BarcodeDetector({ formats: supported.length > 0 ? supported : ['code_128', 'ean_13', 'upc_a', 'qr_code'] });
+        barcodeScanInterval = setInterval(async () => {
+          if (!cameraStream || !video || video.readyState !== 4) return;
+          try {
+            const barcodes = await detector.detect(video);
+            if (barcodes.length > 0) {
+              const code = barcodes[0].rawValue;
+              const input = document.getElementById("barcodeScanInput");
+              if (input) input.value = code;
+              if (statusMsg) statusMsg.innerText = `Detected SKU: ${code}`;
+              stopCameraScanner();
+              executeBarcodeScan();
+            }
+          } catch (e) {
+            // Frame detection error, ignore and continue next frame
+          }
+        }, 300);
+      } catch (e) {
+        console.warn("BarcodeDetector error, using live video preview:", e);
+      }
+    } else {
+      if (statusMsg) {
+        statusMsg.innerText = "Live camera preview active (type SKU or select below if detector is unsupported)";
+      }
+    }
+  } catch (err) {
+    console.error("Camera access error:", err);
+    if (btn) btn.innerText = "📷 Start Live Camera";
+    if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+      alert("Camera permission was denied. You can still use manual SKU lookup below.");
+    } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+      alert("No camera device found on this system. You can still use manual SKU lookup below.");
+    } else {
+      alert(`Could not start camera (${err.message}). You can use manual SKU lookup below.`);
+    }
+  }
+}
+
+function stopCameraScanner() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(track => track.stop());
+    cameraStream = null;
+  }
+  if (barcodeScanInterval) {
+    clearInterval(barcodeScanInterval);
+    barcodeScanInterval = null;
+  }
+  const video = document.getElementById("cameraScannerVideo");
+  const placeholder = document.getElementById("cameraPlaceholderIcon");
+  const statusMsg = document.getElementById("cameraStatusMsg");
+  const btn = document.getElementById("btnToggleCamera");
+
+  if (video) {
+    video.style.display = "none";
+    video.srcObject = null;
+  }
+  if (placeholder) placeholder.style.display = "block";
+  if (statusMsg) statusMsg.style.display = "none";
+  if (btn) btn.innerText = "📷 Start Live Camera";
+}
+
 async function executeBarcodeScan() {
   const input = document.getElementById("barcodeScanInput").value.trim().toUpperCase();
   const resBox = document.getElementById("scannerResultBox");
@@ -696,6 +930,9 @@ async function submitModalReceipt() {
     alert(`Success: ${data.message} (${data.doc_number})`);
     closeModal("modalReceipt");
     loadAllData();
+  } else {
+    const err = await res.json();
+    alert(`Error: ${err.detail || 'Receipt creation failed'}`);
   }
 }
 
@@ -774,6 +1011,9 @@ async function submitModalAdjustment() {
     alert(`Stock Adjustment Posted: ${data.message} (${data.doc_number})`);
     closeModal("modalAdjustment");
     loadAllData();
+  } else {
+    const err = await res.json();
+    alert(`Error: ${err.detail || 'Adjustment failed'}`);
   }
 }
 
@@ -838,7 +1078,7 @@ async function requestOTP() {
   if (res.ok) {
     document.getElementById("otpInputSection").style.display = "block";
     document.getElementById("otpCodeInput").value = data.otp_preview || "";
-    alert(`OTP Code generated: ${data.otp_preview}\n(Preview auto-filled for instant hackathon demonstration)`);
+    alert(`OTP Code generated: ${data.otp_preview}\n(Preview auto-filled for instant demonstration)`);
   } else {
     alert(`Error: ${data.detail || 'Failed to generate OTP'}`);
   }
@@ -882,15 +1122,154 @@ function handleWarehouseChange(val) {
   loadDashboardKPIs();
 }
 
+// 8. CSV & Printable Exports
 function exportLedgerCSV() {
-  let csv = "Move ID,Reference,Product,SKU,Quantity,UOM,Source Location,Destination Location,Date\n";
+  if (!state.ledger || state.ledger.length === 0) {
+    return alert("No ledger move records available to export.");
+  }
+
+  let csv = "Date/Time,Move ID,Reference,Product,SKU,Quantity,UOM,Source Location,Destination Location,Status\n";
   state.ledger.forEach(m => {
-    csv += `MOV-${m.id},"${m.reference || ''}","${m.product_name}","${m.sku}",${m.quantity},"${m.uom}","${m.from_location}","${m.to_location}","${m.date}"\n`;
+    const escapedDate = `"${(m.date || '').replace(/"/g, '""')}"`;
+    const escapedRef = `"${(m.reference || `MOV-${m.id}`).replace(/"/g, '""')}"`;
+    const escapedName = `"${(m.product_name || '').replace(/"/g, '""')}"`;
+    const escapedSku = `"${(m.sku || '').replace(/"/g, '""')}"`;
+    const escapedSrc = `"${(m.from_location || '').replace(/"/g, '""')}"`;
+    const escapedDest = `"${(m.to_location || '').replace(/"/g, '""')}"`;
+    const escapedStatus = `"${(m.status || 'VALIDATED').replace(/"/g, '""')}"`;
+
+    csv += `${escapedDate},MOV-${m.id},${escapedRef},${escapedName},${escapedSku},${m.quantity},"${m.uom}",${escapedSrc},${escapedDest},${escapedStatus}\n`;
   });
-  const blob = new Blob([csv], { type: 'text/csv' });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.setAttribute('href', url);
   a.setAttribute('download', `StockSense_Ledger_${new Date().toISOString().slice(0,10)}.csv`);
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+}
+
+function exportStockAuditCSV() {
+  if (!state.products || state.products.length === 0) {
+    return alert("No product stock data available to export.");
+  }
+
+  let csv = "Product Name,SKU,Category,On Hand,UOM,Cost Price (INR),Total Valuation (INR),Min Safety Threshold,Target Stock Level,Stock Status\n";
+  state.products.forEach(p => {
+    const valuation = ((p.cost_price || 0) * (p.on_hand || 0)).toFixed(2);
+    const escapedName = `"${(p.name || '').replace(/"/g, '""')}"`;
+    const escapedSku = `"${(p.sku || '').replace(/"/g, '""')}"`;
+    const escapedCat = `"${(p.category || '').replace(/"/g, '""')}"`;
+    const escapedStatus = `"${(p.status || '').replace(/"/g, '""')}"`;
+
+    csv += `${escapedName},${escapedSku},${escapedCat},${p.on_hand},"${p.uom}",${p.cost_price},${valuation},${p.min_reorder_qty},${p.target_stock_qty},${escapedStatus}\n`;
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.setAttribute('href', url);
+  a.setAttribute('download', `StockSense_Audit_Report_${new Date().toISOString().slice(0,10)}.csv`);
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+}
+
+function printOperationVoucher(docNumber) {
+  const doc = state.operations.find(o => o.doc_number === docNumber);
+  if (!doc) return alert("Document not found");
+
+  const title = `${doc.doc_type.toUpperCase()} VOUCHER`;
+  const itemsRows = doc.items.map((it, idx) => `
+    <tr>
+      <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${idx + 1}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-family: monospace;">${it.sku}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-weight: 600;">${it.product_name}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: 700;">${it.quantity} ${it.uom}</td>
+    </tr>
+  `).join("");
+
+  const printHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>StockSense - ${doc.doc_number}</title>
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 40px; color: #1e293b; line-height: 1.5; }
+        .header { display: flex; justify-content: space-between; border-bottom: 2px solid #2563eb; padding-bottom: 16px; margin-bottom: 24px; }
+        .logo { font-size: 22px; font-weight: 800; color: #2563eb; }
+        .doc-title { font-size: 18px; font-weight: 700; text-align: right; }
+        .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; background: #f8fafc; padding: 16px; border-radius: 6px; margin-bottom: 24px; font-size: 13px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 13px; }
+        th { background: #f1f5f9; padding: 10px; text-align: left; font-size: 12px; border-bottom: 2px solid #cbd5e1; }
+        .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 60px; font-size: 12px; }
+        .sig-line { border-top: 1px solid #94a3b8; padding-top: 6px; text-align: center; }
+        @media print { body { margin: 0; } }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div>
+          <div class="logo">⚡ StockSense IMS</div>
+          <div style="font-size: 12px; color: #64748b;">Double-Entry Enterprise Inventory Management</div>
+        </div>
+        <div>
+          <div class="doc-title">${title}</div>
+          <div style="font-size: 14px; font-family: monospace; font-weight: 700; color: #2563eb;">${doc.doc_number}</div>
+          <div style="font-size: 12px; color: #64748b;">Status: <strong>${doc.status.toUpperCase()}</strong></div>
+        </div>
+      </div>
+
+      <div class="meta-grid">
+        <div>
+          <div><strong>Partner / Entity:</strong> ${doc.partner_name}</div>
+          <div><strong>Date Created:</strong> ${doc.created_at}</div>
+        </div>
+        <div>
+          <div><strong>Source Location:</strong> <code>${doc.source_location}</code></div>
+          <div><strong>Destination Location:</strong> <code>${doc.dest_location}</code></div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 40px;">#</th>
+            <th>SKU</th>
+            <th>Product Description</th>
+            <th style="text-align: right;">Quantity</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsRows}
+        </tbody>
+      </table>
+
+      <div class="signatures">
+        <div>
+          <div class="sig-line">Prepared / Handled By (Warehouse Floor Staff)</div>
+        </div>
+        <div>
+          <div class="sig-line">Authorized / Received By (Inventory Manager / Partner)</div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const printWindow = window.open('', '_blank', 'width=800,height=600');
+  if (printWindow) {
+    printWindow.document.write(printHtml);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  } else {
+    alert("Please allow popups to print vouchers.");
+  }
 }
