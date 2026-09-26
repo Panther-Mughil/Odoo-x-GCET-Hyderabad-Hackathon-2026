@@ -24,7 +24,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/stocksense
+      - DATABASE_URL=postgresql+psycopg2://user:password@db:5432/stocksense
     depends_on:
       db:
         condition: service_healthy
