@@ -34,32 +34,30 @@ class VerifyResetRequest(BaseModel):
     new_password: str
 
 
+
 @router.post("/register")
 def register_user(req: RegisterRequest, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == req.email.strip().lower()).first()
     if existing:
-        raise HTTPException(
-            status_code=400, detail="User with this email already exists."
-        )
+        raise HTTPException(status_code=400, detail="User with this email already exists.")
+    
+    # SECURITY FIX: First user is admin, everyone else defaults to staff.
+    is_first_user = db.query(User).count() == 0
+    assigned_role = "admin" if is_first_user else UserRole.STAFF
+    
     user = User(
         email=req.email.strip().lower(),
         password=pwd_context.hash(req.password),
         full_name=req.full_name,
-        role=req.role,
+        role=assigned_role,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
     return {
         "message": "User registered successfully",
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "full_name": user.full_name,
-            "role": user.role,
-        },
+        "user": {"id": user.id, "email": user.email, "full_name": user.full_name, "role": user.role},
     }
-
 
 @router.post("/login")
 def login_user(req: LoginRequest, db: Session = Depends(get_db)):
