@@ -9,28 +9,15 @@ let state = {
   operations: [],
   ledger: [],
   warehouses: [],
-  alerts: [
-    { name: "Wireless Optical Mouse", sku: "WM-1042", current: 12, min: 50, target: 120, cost: 650, status: "Critical", vendor: "Prime Electronics" },
-    { name: "USB-C Multiport Hub", sku: "HUB-2201", current: 28, min: 40, target: 80, cost: 1200, status: "Low", vendor: "TechSource India" },
-    { name: "M8 Industrial Bolts", sku: "BLT-M8-100", current: 8, min: 15, target: 80, cost: 15, status: "Low", vendor: "Chennai Components" },
-    { name: "Structural Steel Rods", sku: "STL-100-KG", current: 77, min: 20, target: 150, cost: 45, status: "Healthy", vendor: "ArcelorMittal Ltd" },
-    { name: "Ergonomic Warehouse Chairs", sku: "CHR-ERG-BLK", current: 18, min: 5, target: 25, cost: 3200, status: "Healthy", vendor: "Metro Supplies" },
-    { name: "Barcode Handheld Scanner", sku: "SCN-BT-09", current: 3, min: 10, target: 30, cost: 4500, status: "Critical", vendor: "Prime Electronics" },
-    { name: "Thermal Label Rolls (500pk)", sku: "LBL-THM-500", current: 14, min: 30, target: 100, cost: 380, status: "Low", vendor: "Metro Supplies" }
-  ],
-  auditLogs: [
-    { time: "Just now", user: "Alex Vance", action: "Validated Delivery DEL-2026-0001", entity: "Metro Frame Works", delta: "-20 kg Steel", location: "WH2/Production Rack", ip: "192.168.1.42" },
-    { time: "14 mins ago", user: "Jordan Cole", action: "Internal Movement INT-2026-0001", entity: "Production Replenishment", delta: "50 kg Steel", location: "WH1/Store → WH2/Rack", ip: "192.168.1.108" },
-    { time: "42 mins ago", user: "Alex Vance", action: "Validated Receipt REC-2026-0001", entity: "ArcelorMittal Steel Ltd", delta: "+100 kg Steel", location: "WH1/Main Store", ip: "192.168.1.42" },
-    { time: "1 hr ago", user: "Jordan Cole", action: "Cycle Count Adjustment ADJ-2026-0001", entity: "Damaged Scrap Audit", delta: "-3 kg Steel", location: "WH2/Production Rack", ip: "192.168.1.108" }
-  ]
+  alerts: [],
+  auditLogs: []
 };
 
 document.addEventListener("DOMContentLoaded", () => {
   state.token = localStorage.getItem("token");
   const savedUser = localStorage.getItem("user");
   
-  // Dark mode init
+
   if (localStorage.getItem("theme") === "dark") {
     document.body.classList.add("dark-theme");
   }
@@ -66,7 +53,7 @@ function toggleDarkMode() {
 }
 
 
-// Navigation Engine
+
 function navigate(viewName) {
   state.currentView = viewName;
   document.querySelectorAll(".page-view").forEach(el => el.style.display = "none");
@@ -75,7 +62,7 @@ function navigate(viewName) {
   const targetView = document.getElementById(`view-${viewName}`);
   if (targetView) targetView.style.display = "block";
 
-  // Update active sidebar item
+
   const links = document.querySelectorAll(".nav-link");
   links.forEach(l => {
     if (l.getAttribute("onclick") && l.getAttribute("onclick").includes(viewName)) {
@@ -83,13 +70,13 @@ function navigate(viewName) {
     }
   });
 
-  // Breadcrumb
+
   const breadcrumb = document.getElementById("breadcrumbActive");
   if (breadcrumb) {
     breadcrumb.innerText = capitalizeFirst(viewName);
   }
 
-  // Refresh data for the active view
+
   if (viewName === 'dashboard') loadDashboardKPIs();
   if (viewName === 'products') renderProductsTable();
   if (viewName === 'receipts') renderReceiptsTable();
@@ -106,7 +93,7 @@ function capitalizeFirst(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-// 1. Data Fetching
+
 async function loadAllData() {
   await Promise.all([
     loadDashboardKPIs(),
@@ -139,6 +126,18 @@ async function fetchProducts() {
     const res = await fetch("/api/products");
     if (!res.ok) return;
     state.products = await res.json();
+    
+    // Dynamically compute alerts from products
+    state.alerts = state.products.filter(p => p.is_low_stock).map(p => ({
+      name: p.name,
+      sku: p.sku,
+      current: p.on_hand,
+      min: p.min_reorder_qty,
+      target: p.target_stock_qty,
+      cost: p.cost_price || 0,
+      status: p.on_hand === 0 ? 'Critical' : 'Low'
+    }));
+
     renderProductsTable();
     populateModalDropdowns();
   } catch (e) {
@@ -165,6 +164,18 @@ async function fetchLedger() {
     const res = await fetch("/api/dashboard/ledger?limit=50");
     if (!res.ok) return;
     state.ledger = await res.json();
+    
+    // Dynamically compute audit logs from ledger
+    state.auditLogs = state.ledger.map(m => ({
+      time: m.date,
+      user: "System",
+      action: m.reference || `MOV-${m.id}`,
+      entity: m.product_name,
+      delta: `${m.quantity} ${m.uom}`,
+      location: `${m.from_location} → ${m.to_location}`,
+      ip: "127.0.0.1"
+    }));
+
     renderLedgerTable();
   } catch (e) {
     console.error(e);
@@ -182,9 +193,9 @@ async function fetchTopology() {
   }
 }
 
-// 2. Charts Implementation
+
 function initCharts() {
-  // Inventory Health Donut
+
   const donutCtx = document.getElementById("healthDonutChart")?.getContext("2d");
   if (donutCtx) {
     healthDonutChart = new Chart(donutCtx, {
@@ -207,7 +218,7 @@ function initCharts() {
     });
   }
 
-  // Stock Movement Chart
+
   const moveCtx = document.getElementById("movementChart")?.getContext("2d");
   if (moveCtx) {
     movementChart = new Chart(moveCtx, {
@@ -272,7 +283,7 @@ function updateChartRange(range) {
   movementChart.update();
 }
 
-// 3. Render Views
+
 function renderProductsTable() {
   const tbody = document.getElementById("productsTableBody");
   if (!tbody) return;
@@ -517,7 +528,7 @@ function renderAuditLogs() {
   });
 }
 
-// 4. Slide-out Drawers for Move and Product Inspection
+
 function openMoveDrawer(m) {
   document.getElementById("drawerTitle").innerText = `Stock Movement: ${m.reference || `MOV-${m.id}`}`;
   const body = document.getElementById("drawerBody");
@@ -646,7 +657,7 @@ function closeDrawer() {
   document.getElementById("detailDrawerPanel").classList.remove("active");
 }
 
-// 5. Barcode Scanner Simulation
+
 async function executeBarcodeScan() {
   const input = document.getElementById("barcodeScanInput").value.trim().toUpperCase();
   const resBox = document.getElementById("scannerResultBox");
@@ -690,7 +701,7 @@ async function executeBarcodeScan() {
   `;
 }
 
-// 6. Modal Operations
+
 function openReceiptModal() { openModal('modalReceipt'); }
 function openDeliveryModal() { openModal('modalDelivery'); }
 function openTransferModal() { openModal('modalTransfer'); }
@@ -855,7 +866,7 @@ async function submitCreateProduct() {
   }
 }
 
-// 7. Role & Auth Switch
+
 function toggleUserRole() {
   if (state.currentUser.role === 'Inventory Manager') {
     setDemoUser('Jordan Cole', 'Warehouse Staff');
@@ -940,7 +951,7 @@ function exportLedgerCSV() {
   a.click();
 }
 
-// -- NEW STATE MACHINE ACTIONS --
+
 async function markDocReady(id) {
   try {
     const res = await fetch(`/api/operations/${id}/mark_ready`, { method: "POST" });
@@ -974,7 +985,7 @@ function printReceipt(id) {
     const doc = state.operations.find(o => o.id === id);
     if (!doc) return;
     
-    // Fill the animated receipt DOM
+
     document.getElementById("receipt-number").innerText = doc.doc_number;
     document.getElementById("receipt-partner").innerText = doc.partner_name;
     document.getElementById("receipt-date").innerText = new Date().toLocaleString();
@@ -991,11 +1002,11 @@ function printReceipt(id) {
         tbody.appendChild(tr);
     });
     
-    // Show overlay
+
     const overlay = document.getElementById("receipt-overlay");
     overlay.style.display = "flex";
     
-    // Trigger animations
+
     const paper = document.getElementById("receipt-paper");
     paper.classList.remove("print-animate");
     void paper.offsetWidth; // trigger reflow
@@ -1006,7 +1017,7 @@ function closeReceipt() {
     document.getElementById("receipt-overlay").style.display = "none";
 }
 
-// --- AUTHENTICATION ---
+
 function showAuthView(view) {
   document.getElementById("view-login").style.display = view === 'login' ? 'block' : 'none';
   document.getElementById("view-signup").style.display = view === 'signup' ? 'block' : 'none';
@@ -1041,7 +1052,8 @@ async function handleSignup(e) {
   const full_name = document.getElementById("signup-name").value;
   const email = document.getElementById("signup-email").value;
   const password = document.getElementById("signup-password").value;
-  const role = document.getElementById("signup-role").value;
+  const roleInput = document.getElementById("signup-role");
+  const role = roleInput ? roleInput.value : "staff";
   
   try {
     const res = await fetch("/api/auth/register", {
@@ -1067,7 +1079,7 @@ function logout() {
   window.location.reload();
 }
 
-// Admin Features
+
 async function loadAdminData() {
   try {
     const res = await fetch("/api/auth/users");
@@ -1093,7 +1105,7 @@ async function loadAdminData() {
   }
 }
 
-// Hook into navigate
+
 const originalNavigate = navigate;
 navigate = function(viewName) {
   originalNavigate(viewName);

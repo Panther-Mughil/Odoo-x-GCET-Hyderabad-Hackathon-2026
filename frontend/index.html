@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StockSense</title>
   <link rel="icon" type="image/svg+xml" href="/static/assets/favicon.svg">
-  <!-- Google Fonts Inter -->
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-  <!-- Chart.js -->
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Enterprise Light Stylesheet -->
+
   <link rel="stylesheet" href="/static/css/enterprise.css">
 </head>
 <body>
@@ -61,7 +61,7 @@
 
 <div id="authenticated-app" style="display:none; flex:1; width:100vw; height:100vh; overflow:hidden;">
 
-  <!-- LEFT SIDEBAR -->
+
   <aside class="app-sidebar" id="appSidebar">
     <div class="sidebar-header">
       <div class="brand-wrapper">
@@ -74,7 +74,7 @@
     </div>
 
     <div class="sidebar-nav">
-      <!-- Section: Main -->
+
       <div class="nav-section">
         <div class="nav-section-title">Main</div>
         <ul class="nav-list">
@@ -126,7 +126,7 @@
         </ul>
       </div>
 
-      <!-- Section: Operations -->
+
       <div class="nav-section">
         <div class="nav-section-title">Operations</div>
         <ul class="nav-list">
@@ -152,7 +152,7 @@
         </ul>
       </div>
 
-      <!-- Section: Administration -->
+
       <div class="nav-section">
         <div class="nav-section-title">Administration</div>
         <ul class="nav-list">
@@ -172,7 +172,7 @@
       </div>
     </div>
 
-    <!-- Sidebar Footer -->
+
     <div class="sidebar-footer">
       <div class="system-status">
         <div class="status-dot"></div>
@@ -191,9 +191,9 @@
     </div>
   </aside>
 
-  <!-- MAIN WRAPPER -->
+
   <main class="app-main">
-    <!-- TOP HEADER -->
+
     <header class="app-header">
       <div class="header-left">
         <div class="breadcrumb-trail">
@@ -209,14 +209,14 @@
 
       <div class="header-right">
 
-        <!-- Dark Mode Toggle -->
+
         <button class="btn btn-outline" style="padding: 6px 12px; margin-right: 16px; border-radius: 20px; font-size: 13px;" onclick="toggleDarkMode()">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
         </button>
 
-        <!-- Live Data Indicator -->
+
         <span class="badge badge-success" style="font-size: 11px;">🟢 Live Data</span>
-        <!-- Warehouse Selector -->
+
         <div class="warehouse-pill">
           <span>🏭</span>
           <select id="headerWarehouseSelect" onchange="handleWarehouseChange(this.value)">
@@ -226,7 +226,7 @@
             <option value="WH3">North Distribution Center</option>
           </select>
         </div>
-        <!-- Quick Action Button -->
+
         <div style="position: relative;">
           <button class="btn btn-primary" onclick="toggleQuickMenu()">+ New Operation ▾</button>
           <div id="quickActionMenu" style="display: none; position: absolute; right: 0; top: 110%; background: #ffffff; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); box-shadow: var(--shadow-lg); width: 200px; z-index: 1000; padding: 6px 0;">
@@ -239,10 +239,10 @@
       </div>
     </header>
 
-    <!-- CONTENT SECTIONS -->
+
     <div class="page-container">
 
-      <!-- ================= 1. DASHBOARD ================= -->
+
       <section id="view-dashboard" class="page-view">
         <div class="page-header-row">
           <div class="page-title-block">
@@ -255,7 +255,7 @@
           </div>
         </div>
 
-        <!-- 6 Enterprise KPI Cards -->
+
         <div class="kpi-row">
           <div class="kpi-card">
             <div class="kpi-top">
@@ -327,9 +327,9 @@
           </div>
         </div>
 
-        <!-- 2-Column Section: Inventory Health & Reorder Alerts -->
+
         <div class="dashboard-grid-2">
-          <!-- Inventory Health Donut -->
+
           <div class="card">
             <div class="card-header">
               <h3><span>📊</span> Inventory Health Distribution</h3>
@@ -360,7 +360,7 @@
             </div>
           </div>
 
-          <!-- Reorder Alerts -->
+
           <div class="card">
             <div class="card-header">
               <h3><span>⚠️</span> Reorder Alerts</h3>
@@ -412,7 +412,7 @@
           </div>
         </div>
 
-        <!-- Movement Analytics Chart -->
+
         <div class="card" style="margin-bottom: 24px;">
           <div class="card-header">
             <h3><span>📈</span> Stock Movement</h3>
@@ -428,12 +428,12 @@
           </div>
         </div>
 
-        <!-- Warehouse Overview Grid -->
+
         <div class="page-title-block" style="margin-bottom: 14px;">
           <h3 style="font-size: 16px; font-weight: 700;">Warehouse Topology & Utilization</h3>
         </div>
         <div class="dashboard-grid-warehouses">
-          <!-- Card 1 -->
+
           <div class="card" style="padding: 18px;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
               <div>
@@ -459,7 +459,7 @@
             </div>
           </div>
 
-          <!-- Card 2 -->
+
           <div class="card" style="padding: 18px;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
               <div>
@@ -485,7 +485,7 @@
             </div>
           </div>
 
-          <!-- Card 3 -->
+
           <div class="card" style="padding: 18px;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
               <div>
@@ -511,7 +511,7 @@
             </div>
           </div>
 
-          <!-- Card 4 (Virtual Hubs) -->
+
           <div class="card" style="padding: 18px;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
               <div>
@@ -530,7 +530,7 @@
         </div>
       </section>
 
-      <!-- ================= 2. DOUBLE-ENTRY STOCK LEDGER ================= -->
+
       <section id="view-ledger" class="page-view" style="display: none;">
         <div class="page-header-row">
           <div class="page-title-block">
@@ -561,7 +561,7 @@
                   </tr>
                 </thead>
                 <tbody id="ledgerTableBody">
-                  <!-- Dynamically Rendered -->
+
                 </tbody>
               </table>
             </div>
@@ -569,7 +569,7 @@
         </div>
       </section>
 
-      <!-- ================= 3. RECEIPTS (INCOMING) ================= -->
+
       <section id="view-receipts" class="page-view" style="display: none;">
         <div class="page-header-row">
           <div class="page-title-block">
@@ -595,14 +595,14 @@
                 </tr>
               </thead>
               <tbody id="receiptsTableBody">
-                <!-- Dynamically Rendered -->
+
               </tbody>
             </table>
           </div>
         </div>
       </section>
 
-      <!-- ================= 4. DELIVERIES (OUTGOING) ================= -->
+
       <section id="view-deliveries" class="page-view" style="display: none;">
         <div class="page-header-row">
           <div class="page-title-block">
@@ -627,14 +627,14 @@
                 </tr>
               </thead>
               <tbody id="deliveriesTableBody">
-                <!-- Dynamically Rendered -->
+
               </tbody>
             </table>
           </div>
         </div>
       </section>
 
-      <!-- ================= 5. INTERNAL TRANSFERS ================= -->
+
       <section id="view-transfers" class="page-view" style="display: none;">
         <div class="page-header-row">
           <div class="page-title-block">
@@ -658,14 +658,14 @@
                 </tr>
               </thead>
               <tbody id="transfersTableBody">
-                <!-- Dynamically Rendered -->
+
               </tbody>
             </table>
           </div>
         </div>
       </section>
 
-      <!-- ================= 6. STOCK ADJUSTMENTS ================= -->
+
       <section id="view-adjustments" class="page-view" style="display: none;">
         <div class="page-header-row">
           <div class="page-title-block">
@@ -690,14 +690,14 @@
                 </tr>
               </thead>
               <tbody id="adjustmentsTableBody">
-                <!-- Dynamically Rendered -->
+
               </tbody>
             </table>
           </div>
         </div>
       </section>
 
-      <!-- ================= 7. PRODUCTS CATALOG ================= -->
+
       <section id="view-products" class="page-view" style="display: none;">
         <div class="page-header-row">
           <div class="page-title-block">
@@ -724,14 +724,14 @@
                 </tr>
               </thead>
               <tbody id="productsTableBody">
-                <!-- Dynamically Rendered -->
+
               </tbody>
             </table>
           </div>
         </div>
       </section>
 
-      <!-- ================= 8. BARCODE SCANNER ================= -->
+
       <section id="view-scanner" class="page-view" style="display: none;">
         <div class="page-header-row">
           <div class="page-title-block">
@@ -757,15 +757,15 @@
               </div>
             </div>
 
-            <!-- Scan Output Card -->
+
             <div id="scannerResultBox" style="display: none; border-top: 1px solid var(--border-subtle); padding-top: 16px; margin-top: 16px;">
-              <!-- Populated by JS -->
+
             </div>
           </div>
         </div>
       </section>
 
-      <!-- ================= 9. REORDER RULES ================= -->
+
       <section id="view-reorder" class="page-view" style="display: none;">
         <div class="page-header-row">
           <div class="page-title-block">
@@ -790,14 +790,14 @@
                 </tr>
               </thead>
               <tbody id="reorderTableBody">
-                <!-- Dynamically Rendered -->
+
               </tbody>
             </table>
           </div>
         </div>
       </section>
 
-      <!-- ================= 10. WAREHOUSES & RACKS ================= -->
+
       <section id="view-warehouses" class="page-view" style="display: none;">
         <div class="page-header-row">
           <div class="page-title-block">
@@ -807,11 +807,11 @@
         </div>
 
         <div id="warehouseTopologyGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px;">
-          <!-- Dynamically Rendered -->
+
         </div>
       </section>
 
-      <!-- ================= 11. AUDIT LOG ================= -->
+
       <section id="view-audit" class="page-view" style="display: none;">
         <div class="page-header-row">
           <div class="page-title-block">
@@ -835,7 +835,7 @@
                 </tr>
               </thead>
               <tbody id="auditTableBody">
-                <!-- Dynamically Rendered -->
+
               </tbody>
             </table>
           </div>
@@ -845,7 +845,7 @@
     </div>
   </main>
 
-  <!-- ================= SLIDE-OUT DETAIL DRAWER ================= -->
+
   <div class="drawer-backdrop" id="detailDrawerBackdrop" onclick="closeDrawer()"></div>
   <aside class="drawer-panel" id="detailDrawerPanel">
     <div class="drawer-header">
@@ -853,11 +853,11 @@
       <button class="btn btn-sm btn-default" onclick="closeDrawer()">✕ Close</button>
     </div>
     <div class="drawer-content" id="drawerBody">
-      <!-- Populated dynamically -->
+
     </div>
   </aside>
 
-  <!-- ================= MODAL: NEW RECEIPT ================= -->
+
   <div class="modal-backdrop" id="modalReceipt">
     <div class="modal-card">
       <div class="modal-header">
@@ -914,7 +914,7 @@
     </div>
   </div>
 
-  <!-- ================= MODAL: NEW DELIVERY ================= -->
+
   <div class="modal-backdrop" id="modalDelivery">
     <div class="modal-card">
       <div class="modal-header">
@@ -970,7 +970,7 @@
     </div>
   </div>
 
-  <!-- ================= MODAL: INTERNAL TRANSFER ================= -->
+
   <div class="modal-backdrop" id="modalTransfer">
     <div class="modal-card">
       <div class="modal-header">
@@ -1020,7 +1020,7 @@
     </div>
   </div>
 
-  <!-- ================= MODAL: STOCK ADJUSTMENT ================= -->
+
   <div class="modal-backdrop" id="modalAdjustment">
     <div class="modal-card">
       <div class="modal-header">
@@ -1067,7 +1067,7 @@
     </div>
   </div>
 
-  <!-- ================= MODAL: CREATE PRODUCT ================= -->
+
   <div class="modal-backdrop" id="modalCreateProduct">
     <div class="modal-card">
       <div class="modal-header">
@@ -1125,7 +1125,7 @@
     </div>
   </div>
 
-  <!-- ================= MODAL: AUTH & OTP RESET ================= -->
+
   <div class="modal-backdrop" id="modalAuth">
     <div class="modal-card">
       <div class="modal-header">
@@ -1172,8 +1172,8 @@
     </div>
   </div>
 
-  <!-- Scripts -->
-<!-- ANIMATED RECEIPT MODAL -->
+
+
 
 <div id="receipt-overlay" class="receipt-overlay" style="display: none;">
 
