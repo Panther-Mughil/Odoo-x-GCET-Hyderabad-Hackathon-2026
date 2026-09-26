@@ -43,7 +43,7 @@ def register_user(req: RegisterRequest, db: Session = Depends(get_db)):
         )
     user = User(
         email=req.email.strip().lower(),
-        password=req.password,  # For prototype demonstration
+        password=pwd_context.hash(req.password),
         full_name=req.full_name,
         role=req.role,
     )
@@ -121,7 +121,12 @@ def reset_password(req: VerifyResetRequest, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="User account not found")
 
-    user.password = req.new_password
+    user.password = pwd_context.hash(req.new_password)
     record.is_used = 1
     db.commit()
     return {"message": "Password has been successfully updated"}
+
+@router.get("/users")
+def get_all_users(db: Session = Depends(get_db)):
+    users = db.query(User).all()
+    return [{"id": u.id, "email": u.email, "full_name": u.full_name, "role": u.role} for u in users]
