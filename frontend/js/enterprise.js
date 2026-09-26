@@ -406,13 +406,23 @@ function renderLedgerTable() {
 
   tbody.innerHTML = "";
   state.ledger.forEach(m => {
+    const isIncoming = m.to_location.includes("WH");
+    const isOutgoing = m.from_location.includes("WH");
+    
+    let qtyHtml = `<strong style="color: var(--text-base);">${m.quantity} ${m.uom}</strong>`;
+    if (isIncoming && !isOutgoing) {
+       qtyHtml = `<strong style="color: #16a34a;">+${m.quantity} ${m.uom}</strong>`;
+    } else if (isOutgoing && !isIncoming) {
+       qtyHtml = `<strong style="color: #dc2626;">-${m.quantity} ${m.uom}</strong>`;
+    }
+
     const tr = document.createElement("tr");
     tr.className = "clickable";
     tr.onclick = () => openMoveDrawer(m);
     tr.innerHTML = `
       <td><code style="font-weight: 700; color: #2563eb;">${m.reference || `MOV-${m.id}`}</code></td>
       <td><strong>${m.product_name}</strong> <span style="font-size: 11px; color: var(--text-muted);">(${m.sku})</span></td>
-      <td><strong style="color: #16a34a;">${m.quantity} ${m.uom}</strong></td>
+      <td>${qtyHtml}</td>
       <td><code style="color: #475569;">${m.from_location}</code></td>
       <td><code style="color: #16a34a; font-weight: 600;">${m.to_location}</code></td>
       <td><span class="badge badge-default">Double-Entry</span></td>
@@ -904,7 +914,7 @@ function populateModalDropdowns() {
     state.products.forEach(p => {
       const opt = document.createElement("option");
       opt.value = p.id;
-      opt.innerText = `${p.sku} — ${p.name} (${p.on_hand} ${p.uom} on-hand)`;
+      opt.innerText = `${p.sku} - ${p.name} (${p.on_hand} ${p.uom} on-hand)`;
       sel.appendChild(opt);
     });
   });
@@ -1272,4 +1282,202 @@ function printOperationVoucher(docNumber) {
   } else {
     alert("Please allow popups to print vouchers.");
   }
+}
+
+// -- NEW STATE MACHINE ACTIONS --
+async function markDocReady(id) {
+  try {
+    const res = await fetch(`/api/operations/${id}/mark_ready`, { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) alert("Error: " + (data.detail || "Failed to mark ready"));
+    else {
+      showToast("Operation updated: " + data.status, "success");
+      await fetchOperations(); // Refresh lists
+      await loadDashboardKPIs();
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function validateDoc(id) {
+  try {
+    const res = await fetch(`/api/operations/${id}/validate`, { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) alert("Validation Error: " + (data.detail || "Insufficient stock or error"));
+    else {
+      showToast("Validated Successfully! Stock moved.", "success");
+      await loadAllData(); // Refresh everything since stock changed
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function printReceipt(id) {
+    const doc = state.operations.find(o => o.id === id);
+    if (!doc) return;
+    
+    // Fill the animated receipt DOM
+    document.getElementById("receipt-number").innerText = doc.doc_number;
+    document.getElementById("receipt-partner").innerText = doc.partner_name;
+    document.getElementById("receipt-date").innerText = new Date().toLocaleString();
+    
+    const tbody = document.getElementById("receipt-items-body");
+    tbody.innerHTML = "";
+    
+    doc.items.forEach(item => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${item.product_name} <br><small>${item.sku}</small></td>
+            <td style="text-align: right; font-weight: bold;">${item.quantity} ${item.uom}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+    
+    // Show overlay
+    const overlay = document.getElementById("receipt-overlay");
+    overlay.style.display = "flex";
+    
+    // Trigger animations
+    const paper = document.getElementById("receipt-paper");
+    paper.classList.remove("print-animate");
+    void paper.offsetWidth; // trigger reflow
+    paper.classList.add("print-animate");
+}
+
+function closeReceipt() {
+    document.getElementById("receipt-overlay").style.display = "none";
+}
+
+// ================= INTERACTIVE DEMO TOUR HANDLERS =================
+function openInteractiveWalkthroughModal() {
+  openModal('modalWalkthrough');
+}
+
+async function runWalkthroughStep(step) {
+  const statusBox = document.getElementById("walkthroughStatusBox");
+  const statusText = document.getElementById("walkthroughStatusText");
+  if (statusBox) statusBox.style.display = "block";
+
+  try {
+    if (step === 1) {
+      if (statusText) statusText.innerText = "Step 1: Receiving 100 kg Structural Steel from Vendor...";
+      // Find Steel Product and Main Store Location
+      const prod = state.products.find(p => p.sku === "STL-100-KG") || state.products[0];
+      const mainStore = state.warehouses.flatMap(w => w.locations).find(l => l.full_path === "WH1/Main Store") || { id: 1 };
+      
+      const res = await fetch("/api/operations/receipts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          supplier_name: "ArcelorMittal Steel Ltd",
+          dest_location_id: mainStore.id,
+          items: [{ product_id: prod.id, quantity: 100.0 }]
+        })
+      });
+      const data = await res.json();
+      
+      // Auto-mark ready and validate
+      await fetch(`/api/operations/${data.id}/mark_ready`, { method: "POST" });
+      await fetch(`/api/operations/${data.id}/validate`, { method: "POST" });
+
+      if (statusText) statusText.innerHTML = `✅ <strong>Step 1 Complete:</strong> Received 100 kg Steel into Main Store! (Doc: <code>${data.doc_number}</code>)`;
+      const btn1 = document.getElementById("btn-walkthrough-1");
+      if (btn1) { btn1.className = "btn btn-sm btn-success"; btn1.innerText = "Completed ✓"; }
+      const btn2 = document.getElementById("btn-walkthrough-2");
+      if (btn2) { btn2.className = "btn btn-sm btn-primary"; }
+      showToast("Step 1: Stock Received Successfully!", "success");
+    } 
+    else if (step === 2) {
+      if (statusText) statusText.innerText = "Step 2: Transferring 50 kg Steel from Main Store to Production Rack...";
+      const prod = state.products.find(p => p.sku === "STL-100-KG") || state.products[0];
+      const mainStore = state.warehouses.flatMap(w => w.locations).find(l => l.full_path === "WH1/Main Store") || { id: 1 };
+      const prodRack = state.warehouses.flatMap(w => w.locations).find(l => l.full_path === "WH2/Production Rack") || { id: 4 };
+
+      const res = await fetch("/api/operations/transfers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source_location_id: mainStore.id,
+          dest_location_id: prodRack.id,
+          items: [{ product_id: prod.id, quantity: 50.0 }]
+        })
+      });
+      const data = await res.json();
+      
+      await fetch(`/api/operations/${data.id}/mark_ready`, { method: "POST" });
+      await fetch(`/api/operations/${data.id}/validate`, { method: "POST" });
+
+      if (statusText) statusText.innerHTML = `✅ <strong>Step 2 Complete:</strong> Moved 50 kg Steel to Production Rack! (Doc: <code>${data.doc_number}</code>)`;
+      const btn2 = document.getElementById("btn-walkthrough-2");
+      if (btn2) { btn2.className = "btn btn-sm btn-success"; btn2.innerText = "Completed ✓"; }
+      const btn3 = document.getElementById("btn-walkthrough-3");
+      if (btn3) { btn3.className = "btn btn-sm btn-primary"; }
+      showToast("Step 2: Internal Transfer Complete!", "success");
+    }
+    else if (step === 3) {
+      if (statusText) statusText.innerText = "Step 3: Delivering 20 kg Steel to Customer...";
+      const prod = state.products.find(p => p.sku === "STL-100-KG") || state.products[0];
+      const prodRack = state.warehouses.flatMap(w => w.locations).find(l => l.full_path === "WH2/Production Rack") || { id: 4 };
+
+      const res = await fetch("/api/operations/deliveries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer_name: "Metro Frame Works Inc",
+          source_location_id: prodRack.id,
+          items: [{ product_id: prod.id, quantity: 20.0 }]
+        })
+      });
+      const data = await res.json();
+      
+      await fetch(`/api/operations/${data.id}/mark_ready`, { method: "POST" });
+      await fetch(`/api/operations/${data.id}/validate`, { method: "POST" });
+
+      if (statusText) statusText.innerHTML = `✅ <strong>Step 3 Complete:</strong> Shipped 20 kg Steel to Customer! (Doc: <code>${data.doc_number}</code>)`;
+      const btn3 = document.getElementById("btn-walkthrough-3");
+      if (btn3) { btn3.className = "btn btn-sm btn-success"; btn3.innerText = "Completed ✓"; }
+      const btn4 = document.getElementById("btn-walkthrough-4");
+      if (btn4) { btn4.className = "btn btn-sm btn-primary"; }
+      showToast("Step 3: Delivery Shipped Successfully!", "success");
+    }
+    else if (step === 4) {
+      if (statusText) statusText.innerText = "Step 4: Writing off 3 kg damaged steel scrap...";
+      const prod = state.products.find(p => p.sku === "STL-100-KG") || state.products[0];
+      const prodRack = state.warehouses.flatMap(w => w.locations).find(l => l.full_path === "WH2/Production Rack") || { id: 4 };
+
+      const res = await fetch("/api/operations/adjustments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reason: "Audit: Damaged Material Scrap",
+          source_location_id: prodRack.id,
+          items: [{ product_id: prod.id, quantity: 3.0 }]
+        })
+      });
+      const data = await res.json();
+      
+      await fetch(`/api/operations/${data.id}/mark_ready`, { method: "POST" });
+      await fetch(`/api/operations/${data.id}/validate`, { method: "POST" });
+
+      if (statusText) statusText.innerHTML = `✅ <strong>Step 4 Complete:</strong> 3 kg scrap written off! Click 'View Stock Ledger' below to see the full audit trail.`;
+      const btn4 = document.getElementById("btn-walkthrough-4");
+      if (btn4) { btn4.className = "btn btn-sm btn-success"; btn4.innerText = "Completed ✓"; }
+      showToast("Step 4: Scrap Adjusted Successfully!", "success");
+    }
+
+    await loadAllData();
+  } catch (err) {
+    console.error(err);
+    if (statusText) statusText.innerText = "Error executing step: " + err.message;
+  }
+}
+
+async function runAllWalkthroughSteps() {
+  for (let s = 1; s <= 4; s++) {
+    await runWalkthroughStep(s);
+    await new Promise(r => setTimeout(r, 600));
+  }
+  showToast("All 4 Lifecycle Steps executed successfully!", "success");
 }

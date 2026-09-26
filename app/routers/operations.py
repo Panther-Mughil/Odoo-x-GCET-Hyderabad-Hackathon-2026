@@ -5,14 +5,24 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import OperationDocument, StockMove, Location, Product, DocType, DocStatus, User
+from app.models import (
+    OperationDocument,
+    StockMove,
+    Location,
+    Product,
+    DocType,
+    DocStatus,
+    User,
+)
 from app.services.ledger import create_stock_move, get_product_location_stock
 
 router = APIRouter(prefix="/api/operations", tags=["Operations"])
 
+
 class MoveLineItem(BaseModel):
     product_id: int
     quantity: float
+
 
 class CreateReceiptRequest(BaseModel):
     supplier_name: str
@@ -20,11 +30,13 @@ class CreateReceiptRequest(BaseModel):
     items: List[MoveLineItem]
     notes: Optional[str] = None
 
+
 class CreateDeliveryRequest(BaseModel):
     customer_name: str
     source_location_id: int
     items: List[MoveLineItem]
     notes: Optional[str] = None
+
 
 class CreateTransferRequest(BaseModel):
     source_location_id: int
@@ -32,47 +44,56 @@ class CreateTransferRequest(BaseModel):
     items: List[MoveLineItem]
     notes: Optional[str] = None
 
+
 class CreateAdjustmentRequest(BaseModel):
     location_id: int
     product_id: int
     counted_quantity: float
     reason: Optional[str] = "Physical Count Verification"
 
+
 @router.get("")
 def list_operations(
     doc_type: Optional[str] = None,
     status: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     query = db.query(OperationDocument).order_by(OperationDocument.id.desc())
     if doc_type and doc_type != "all":
         query = query.filter(OperationDocument.doc_type == doc_type)
     if status and status != "all":
         query = query.filter(OperationDocument.status == status)
-    
     docs = query.all()
     results = []
     for d in docs:
-        item_summary = []
-        for m in d.moves:
-            item_summary.append({
+        item_summary = [
+            {
                 "product_name": m.product.name,
                 "sku": m.product.sku,
                 "quantity": m.quantity,
-                "uom": m.product.uom
-            })
-        results.append({
-            "id": d.id,
-            "doc_number": d.doc_number,
-            "doc_type": d.doc_type,
-            "status": d.status,
-            "partner_name": d.partner_name or "N/A",
-            "source_location": d.source_location.full_path if d.source_location else "N/A",
-            "dest_location": d.dest_location.full_path if d.dest_location else "N/A",
-            "created_at": d.created_at.strftime("%Y-%m-%d %H:%M"),
-            "items": item_summary
-        })
+                "uom": m.product.uom,
+            }
+            for m in d.moves
+        ]
+        results.append(
+            {
+                "id": d.id,
+                "doc_number": d.doc_number,
+                "doc_type": d.doc_type,
+                "status": d.status,
+                "partner_name": d.partner_name or "N/A",
+                "source_location": (
+                    d.source_location.full_path if d.source_location else "N/A"
+                ),
+                "dest_location": (
+                    d.dest_location.full_path if d.dest_location else "N/A"
+                ),
+                "created_at": d.created_at.strftime("%Y-%m-%d %H:%M"),
+                "items": item_summary,
+            }
+        )
     return results
+
 
 @router.post("/receipts")
 def create_receipt(req: CreateReceiptRequest, db: Session = Depends(get_db)):
@@ -100,15 +121,14 @@ def create_receipt(req: CreateReceiptRequest, db: Session = Depends(get_db)):
     doc = OperationDocument(
         doc_number=doc_num,
         doc_type=DocType.RECEIPT,
-        status=DocStatus.READY,
+        status=DocStatus.DRAFT,
         partner_name=req.supplier_name,
         source_location_id=vendor_loc.id,
         dest_location_id=req.dest_location_id,
-        notes=req.notes
+        notes=req.notes,
     )
     db.add(doc)
     db.flush()
-
     for item in req.items:
         create_stock_move(
             db=db,
@@ -120,13 +140,7 @@ def create_receipt(req: CreateReceiptRequest, db: Session = Depends(get_db)):
             reference=doc_num,
             status=DocStatus.DONE
         )
-    
-    doc.status = DocStatus.DONE # Validated and stock incremented
     db.commit()
-    return {"message": "Receipt validated and stock incremented", "doc_number": doc_num, "document_id": doc.id}
-
-@router.post("/deliveries")
-def create_delivery(req: CreateDeliveryRequest, db: Session = Depends(get_db)):
     if not req.items:
         raise HTTPException(status_code=400, detail="Delivery order must contain at least one item")
 
@@ -158,15 +172,14 @@ def create_delivery(req: CreateDeliveryRequest, db: Session = Depends(get_db)):
     doc = OperationDocument(
         doc_number=doc_num,
         doc_type=DocType.DELIVERY,
-        status=DocStatus.DONE,
+        status=DocStatus.DRAFT,
         partner_name=req.customer_name,
         source_location_id=req.source_location_id,
         dest_location_id=cust_loc.id,
-        notes=req.notes
+        notes=req.notes,
     )
     db.add(doc)
     db.flush()
-
     for item in req.items:
         create_stock_move(
             db=db,
@@ -177,48 +190,17 @@ def create_delivery(req: CreateDeliveryRequest, db: Session = Depends(get_db)):
             document_id=doc.id,
             reference=doc_num,
             status=DocStatus.DONE
-        )
-    db.commit()
-    return {"message": "Delivery validated and stock decremented", "doc_number": doc_num, "document_id": doc.id}
-
-@router.post("/transfers")
-def create_internal_transfer(req: CreateTransferRequest, db: Session = Depends(get_db)):
-    if not req.items:
-        raise HTTPException(status_code=400, detail="Transfer must contain at least one item")
-
-    source_loc = db.query(Location).filter(Location.id == req.source_location_id).first()
-    if not source_loc:
-        raise HTTPException(status_code=400, detail=f"Source location id {req.source_location_id} not found")
-    dest_loc = db.query(Location).filter(Location.id == req.dest_location_id).first()
-    if not dest_loc:
-        raise HTTPException(status_code=400, detail=f"Destination location id {req.dest_location_id} not found")
-
-    for item in req.items:
-        if item.quantity <= 0:
-            raise HTTPException(status_code=400, detail="Item quantity must be greater than 0")
-        prod = db.query(Product).filter(Product.id == item.product_id).first()
-        if not prod:
-            raise HTTPException(status_code=404, detail=f"Product with id {item.product_id} not found")
-        available = get_product_location_stock(db, item.product_id, req.source_location_id)
-        if available < item.quantity:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Cannot transfer {prod.name}. Available at source: {available}, Requested: {item.quantity}"
-            )
-
-    doc_num = f"INT-{datetime.datetime.utcnow().strftime('%y%m%d')}-{random_suffix()}"
     doc = OperationDocument(
         doc_number=doc_num,
         doc_type=DocType.INTERNAL,
-        status=DocStatus.DONE,
+        status=DocStatus.DRAFT,
         partner_name="Internal Movement",
         source_location_id=req.source_location_id,
         dest_location_id=req.dest_location_id,
-        notes=req.notes
+        notes=req.notes,
     )
     db.add(doc)
     db.flush()
-
     for item in req.items:
         create_stock_move(
             db=db,
@@ -233,22 +215,65 @@ def create_internal_transfer(req: CreateTransferRequest, db: Session = Depends(g
     db.commit()
     return {"message": "Internal transfer completed successfully", "doc_number": doc_num, "document_id": doc.id}
 
+@router.post("/{doc_id}/mark_ready")
+def mark_ready(doc_id: int, db: Session = Depends(get_db)):
+    doc = db.query(OperationDocument).filter(OperationDocument.id == doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if doc.status == DocStatus.DONE:
+        raise HTTPException(status_code=400, detail="Document is already done")
+    new_status = DocStatus.READY
+    if doc.doc_type in (DocType.DELIVERY, DocType.INTERNAL):
+        for move in doc.moves:
+            available = get_product_location_stock(
+                db, move.product_id, move.source_location_id
+            )
+            if available < move.quantity:
+                new_status = DocStatus.WAITING
+                break
+    doc.status = new_status
+    for move in doc.moves:
+        move.status = new_status
+    db.commit()
+    return {"message": f"Document marked as {new_status}", "status": new_status}
+
+
+@router.post("/{doc_id}/validate")
+def validate_document(doc_id: int, db: Session = Depends(get_db)):
+    doc = db.query(OperationDocument).filter(OperationDocument.id == doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if doc.status == DocStatus.WAITING:
+        raise HTTPException(status_code=400, detail="Cannot validate while waiting")
+    if doc.status == DocStatus.DONE:
+        raise HTTPException(status_code=400, detail="Already validated")
+    if doc.doc_type in (DocType.DELIVERY, DocType.INTERNAL):
+        for move in doc.moves:
+            available = get_product_location_stock(
+                db, move.product_id, move.source_location_id
+            )
+            if available < move.quantity:
+                doc.status = DocStatus.WAITING
+                for m in doc.moves:
+                    m.status = DocStatus.WAITING
+                db.commit()
+                raise HTTPException(
+                    status_code=400,
+                    detail="Insufficient stock. Status reverted to WAITING.",
+                )
+    doc.status = DocStatus.DONE
+    for move in doc.moves:
+        move.status = DocStatus.DONE
+    db.commit()
+    return {"message": "Document validated successfully", "status": DocStatus.DONE}
+
+
 @router.post("/adjustments")
-def create_stock_adjustment(req: CreateAdjustmentRequest, db: Session = Depends(get_db)):
-    if req.counted_quantity < 0:
-        raise HTTPException(status_code=400, detail="Counted quantity cannot be negative")
-
-    prod = db.query(Product).filter(Product.id == req.product_id).first()
-    if not prod:
-        raise HTTPException(status_code=404, detail=f"Product with id {req.product_id} not found")
-
-    loc = db.query(Location).filter(Location.id == req.location_id).first()
-    if not loc:
-        raise HTTPException(status_code=404, detail=f"Location with id {req.location_id} not found")
-
+def create_stock_adjustment(
+    req: CreateAdjustmentRequest, db: Session = Depends(get_db)
+):
     recorded = get_product_location_stock(db, req.product_id, req.location_id)
     diff = req.counted_quantity - recorded
-
     if diff == 0:
         return {"message": "No adjustment required, counted stock matches recorded stock exactly."}
 
@@ -258,18 +283,10 @@ def create_stock_adjustment(req: CreateAdjustmentRequest, db: Session = Depends(
         loss_loc = db.query(Location).filter(Location.location_type == "virtual").first()
     if not loss_loc:
         raise HTTPException(status_code=500, detail="Virtual loss location not configured")
-
     if diff < 0:
-        # Physical is lower than recorded (Damage / Loss): Source=Warehouse, Dest=Loss
-        src_id = req.location_id
-        dest_id = loss_loc.id
-        abs_qty = abs(diff)
+        src_id, dest_id, abs_qty = req.location_id, loss_loc.id, abs(diff)
     else:
-        # Physical is higher than recorded (Found stock): Source=Loss, Dest=Warehouse
-        src_id = loss_loc.id
-        dest_id = req.location_id
-        abs_qty = diff
-
+        src_id, dest_id, abs_qty = loss_loc.id, req.location_id, diff
     doc = OperationDocument(
         doc_number=doc_num,
         doc_type=DocType.ADJUSTMENT,
@@ -277,11 +294,10 @@ def create_stock_adjustment(req: CreateAdjustmentRequest, db: Session = Depends(
         partner_name=f"Adjustment: {req.reason}",
         source_location_id=src_id,
         dest_location_id=dest_id,
-        notes=f"Recorded: {recorded} -> Counted: {req.counted_quantity} (Difference: {diff} {prod.uom})"
+        notes=f"Recorded: {recorded} -> Counted: {req.counted_quantity}",
     )
     db.add(doc)
     db.flush()
-
     create_stock_move(
         db=db,
         product_id=req.product_id,

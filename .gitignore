@@ -10,3 +10,7 @@ venv/
 .idea/
 .vscode/
 *.log
+*.exe
+*.png
+*.zip
+
