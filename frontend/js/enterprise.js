@@ -970,3 +970,135 @@ function printReceipt(id) {
 function closeReceipt() {
     document.getElementById("receipt-overlay").style.display = "none";
 }
+
+// ================= INTERACTIVE DEMO TOUR HANDLERS =================
+function openInteractiveWalkthroughModal() {
+  openModal('modalWalkthrough');
+}
+
+async function runWalkthroughStep(step) {
+  const statusBox = document.getElementById("walkthroughStatusBox");
+  const statusText = document.getElementById("walkthroughStatusText");
+  if (statusBox) statusBox.style.display = "block";
+
+  try {
+    if (step === 1) {
+      if (statusText) statusText.innerText = "Step 1: Receiving 100 kg Structural Steel from Vendor...";
+      // Find Steel Product and Main Store Location
+      const prod = state.products.find(p => p.sku === "STL-100-KG") || state.products[0];
+      const mainStore = state.warehouses.flatMap(w => w.locations).find(l => l.full_path === "WH1/Main Store") || { id: 1 };
+      
+      const res = await fetch("/api/operations/receipts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          supplier_name: "ArcelorMittal Steel Ltd",
+          dest_location_id: mainStore.id,
+          items: [{ product_id: prod.id, quantity: 100.0 }]
+        })
+      });
+      const data = await res.json();
+      
+      // Auto-mark ready and validate
+      await fetch(`/api/operations/${data.id}/mark_ready`, { method: "POST" });
+      await fetch(`/api/operations/${data.id}/validate`, { method: "POST" });
+
+      if (statusText) statusText.innerHTML = `✅ <strong>Step 1 Complete:</strong> Received 100 kg Steel into Main Store! (Doc: <code>${data.doc_number}</code>)`;
+      const btn1 = document.getElementById("btn-walkthrough-1");
+      if (btn1) { btn1.className = "btn btn-sm btn-success"; btn1.innerText = "Completed ✓"; }
+      const btn2 = document.getElementById("btn-walkthrough-2");
+      if (btn2) { btn2.className = "btn btn-sm btn-primary"; }
+      showToast("Step 1: Stock Received Successfully!", "success");
+    } 
+    else if (step === 2) {
+      if (statusText) statusText.innerText = "Step 2: Transferring 50 kg Steel from Main Store to Production Rack...";
+      const prod = state.products.find(p => p.sku === "STL-100-KG") || state.products[0];
+      const mainStore = state.warehouses.flatMap(w => w.locations).find(l => l.full_path === "WH1/Main Store") || { id: 1 };
+      const prodRack = state.warehouses.flatMap(w => w.locations).find(l => l.full_path === "WH2/Production Rack") || { id: 4 };
+
+      const res = await fetch("/api/operations/transfers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source_location_id: mainStore.id,
+          dest_location_id: prodRack.id,
+          items: [{ product_id: prod.id, quantity: 50.0 }]
+        })
+      });
+      const data = await res.json();
+      
+      await fetch(`/api/operations/${data.id}/mark_ready`, { method: "POST" });
+      await fetch(`/api/operations/${data.id}/validate`, { method: "POST" });
+
+      if (statusText) statusText.innerHTML = `✅ <strong>Step 2 Complete:</strong> Moved 50 kg Steel to Production Rack! (Doc: <code>${data.doc_number}</code>)`;
+      const btn2 = document.getElementById("btn-walkthrough-2");
+      if (btn2) { btn2.className = "btn btn-sm btn-success"; btn2.innerText = "Completed ✓"; }
+      const btn3 = document.getElementById("btn-walkthrough-3");
+      if (btn3) { btn3.className = "btn btn-sm btn-primary"; }
+      showToast("Step 2: Internal Transfer Complete!", "success");
+    }
+    else if (step === 3) {
+      if (statusText) statusText.innerText = "Step 3: Delivering 20 kg Steel to Customer...";
+      const prod = state.products.find(p => p.sku === "STL-100-KG") || state.products[0];
+      const prodRack = state.warehouses.flatMap(w => w.locations).find(l => l.full_path === "WH2/Production Rack") || { id: 4 };
+
+      const res = await fetch("/api/operations/deliveries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer_name: "Metro Frame Works Inc",
+          source_location_id: prodRack.id,
+          items: [{ product_id: prod.id, quantity: 20.0 }]
+        })
+      });
+      const data = await res.json();
+      
+      await fetch(`/api/operations/${data.id}/mark_ready`, { method: "POST" });
+      await fetch(`/api/operations/${data.id}/validate`, { method: "POST" });
+
+      if (statusText) statusText.innerHTML = `✅ <strong>Step 3 Complete:</strong> Shipped 20 kg Steel to Customer! (Doc: <code>${data.doc_number}</code>)`;
+      const btn3 = document.getElementById("btn-walkthrough-3");
+      if (btn3) { btn3.className = "btn btn-sm btn-success"; btn3.innerText = "Completed ✓"; }
+      const btn4 = document.getElementById("btn-walkthrough-4");
+      if (btn4) { btn4.className = "btn btn-sm btn-primary"; }
+      showToast("Step 3: Delivery Shipped Successfully!", "success");
+    }
+    else if (step === 4) {
+      if (statusText) statusText.innerText = "Step 4: Writing off 3 kg damaged steel scrap...";
+      const prod = state.products.find(p => p.sku === "STL-100-KG") || state.products[0];
+      const prodRack = state.warehouses.flatMap(w => w.locations).find(l => l.full_path === "WH2/Production Rack") || { id: 4 };
+
+      const res = await fetch("/api/operations/adjustments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reason: "Audit: Damaged Material Scrap",
+          source_location_id: prodRack.id,
+          items: [{ product_id: prod.id, quantity: 3.0 }]
+        })
+      });
+      const data = await res.json();
+      
+      await fetch(`/api/operations/${data.id}/mark_ready`, { method: "POST" });
+      await fetch(`/api/operations/${data.id}/validate`, { method: "POST" });
+
+      if (statusText) statusText.innerHTML = `✅ <strong>Step 4 Complete:</strong> 3 kg scrap written off! Click 'View Stock Ledger' below to see the full audit trail.`;
+      const btn4 = document.getElementById("btn-walkthrough-4");
+      if (btn4) { btn4.className = "btn btn-sm btn-success"; btn4.innerText = "Completed ✓"; }
+      showToast("Step 4: Scrap Adjusted Successfully!", "success");
+    }
+
+    await loadAllData();
+  } catch (err) {
+    console.error(err);
+    if (statusText) statusText.innerText = "Error executing step: " + err.message;
+  }
+}
+
+async function runAllWalkthroughSteps() {
+  for (let s = 1; s <= 4; s++) {
+    await runWalkthroughStep(s);
+    await new Promise(r => setTimeout(r, 600));
+  }
+  showToast("All 4 Lifecycle Steps executed successfully!", "success");
+}
