@@ -9,21 +9,8 @@ let state = {
   operations: [],
   ledger: [],
   warehouses: [],
-  alerts: [
-    { name: "Wireless Optical Mouse", sku: "WM-1042", current: 12, min: 50, target: 120, cost: 650, status: "Critical", vendor: "Prime Electronics" },
-    { name: "USB-C Multiport Hub", sku: "HUB-2201", current: 28, min: 40, target: 80, cost: 1200, status: "Low", vendor: "TechSource India" },
-    { name: "M8 Industrial Bolts", sku: "BLT-M8-100", current: 8, min: 15, target: 80, cost: 15, status: "Low", vendor: "Chennai Components" },
-    { name: "Structural Steel Rods", sku: "STL-100-KG", current: 77, min: 20, target: 150, cost: 45, status: "Healthy", vendor: "ArcelorMittal Ltd" },
-    { name: "Ergonomic Warehouse Chairs", sku: "CHR-ERG-BLK", current: 18, min: 5, target: 25, cost: 3200, status: "Healthy", vendor: "Metro Supplies" },
-    { name: "Barcode Handheld Scanner", sku: "SCN-BT-09", current: 3, min: 10, target: 30, cost: 4500, status: "Critical", vendor: "Prime Electronics" },
-    { name: "Thermal Label Rolls (500pk)", sku: "LBL-THM-500", current: 14, min: 30, target: 100, cost: 380, status: "Low", vendor: "Metro Supplies" }
-  ],
-  auditLogs: [
-    { time: "Just now", user: "Alex Vance", action: "Validated Delivery DEL-2026-0001", entity: "Metro Frame Works", delta: "-20 kg Steel", location: "WH2/Production Rack", ip: "192.168.1.42" },
-    { time: "14 mins ago", user: "Jordan Cole", action: "Internal Movement INT-2026-0001", entity: "Production Replenishment", delta: "50 kg Steel", location: "WH1/Store → WH2/Rack", ip: "192.168.1.108" },
-    { time: "42 mins ago", user: "Alex Vance", action: "Validated Receipt REC-2026-0001", entity: "ArcelorMittal Steel Ltd", delta: "+100 kg Steel", location: "WH1/Main Store", ip: "192.168.1.42" },
-    { time: "1 hr ago", user: "Jordan Cole", action: "Cycle Count Adjustment ADJ-2026-0001", entity: "Damaged Scrap Audit", delta: "-3 kg Steel", location: "WH2/Production Rack", ip: "192.168.1.108" }
-  ]
+  alerts: [],
+  auditLogs: []
 };
 
 document.addEventListener("DOMContentLoaded", () => {
