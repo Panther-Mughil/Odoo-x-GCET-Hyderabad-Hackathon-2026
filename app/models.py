@@ -3,9 +3,11 @@ from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Tex
 from sqlalchemy.orm import relationship
 from app.database import Base
 
+
 class UserRole:
     MANAGER = "inventory_manager"
     STAFF = "warehouse_staff"
+
 
 class DocType:
     RECEIPT = "receipt"
@@ -13,12 +15,14 @@ class DocType:
     INTERNAL = "internal"
     ADJUSTMENT = "adjustment"
 
+
 class DocStatus:
     DRAFT = "draft"
     WAITING = "waiting"
     READY = "ready"
     DONE = "done"
     CANCELED = "canceled"
+
 
 class User(Base):
     __tablename__ = "users"
@@ -29,6 +33,7 @@ class User(Base):
     role = Column(String, default=UserRole.STAFF)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
+
 class OTPToken(Base):
     __tablename__ = "otp_tokens"
     id = Column(Integer, primary_key=True, index=True)
@@ -36,6 +41,7 @@ class OTPToken(Base):
     otp = Column(String, nullable=False)
     expires_at = Column(DateTime, nullable=False)
     is_used = Column(Integer, default=0)
+
 
 class Warehouse(Base):
     __tablename__ = "warehouses"
@@ -45,14 +51,20 @@ class Warehouse(Base):
     address = Column(String, nullable=True)
     locations = relationship("Location", back_populates="warehouse")
 
+
 class Location(Base):
     __tablename__ = "locations"
     id = Column(Integer, primary_key=True, index=True)
     warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=True)
     name = Column(String, nullable=False)
-    full_path = Column(String, unique=True, index=True, nullable=False) # e.g. WH1/Main Store, Vendors/Incoming
-    location_type = Column(String, default="internal") # internal, vendor, customer, virtual
+    full_path = Column(
+        String, unique=True, index=True, nullable=False
+    )  # e.g. WH1/Main Store, Vendors/Incoming
+    location_type = Column(
+        String, default="internal"
+    )  # internal, vendor, customer, virtual
     warehouse = relationship("Warehouse", back_populates="locations")
+
 
 class ProductCategory(Base):
     __tablename__ = "product_categories"
@@ -60,13 +72,14 @@ class ProductCategory(Base):
     name = Column(String, unique=True, nullable=False)
     products = relationship("Product", back_populates="category")
 
+
 class Product(Base):
     __tablename__ = "products"
     id = Column(Integer, primary_key=True, index=True)
     sku = Column(String, unique=True, index=True, nullable=False)
     name = Column(String, nullable=False)
     category_id = Column(Integer, ForeignKey("product_categories.id"), nullable=True)
-    uom = Column(String, default="units") # kg, units, meters, etc.
+    uom = Column(String, default="units")  # kg, units, meters, etc.
     min_reorder_qty = Column(Float, default=10.0)
     target_stock_qty = Column(Float, default=50.0)
     cost_price = Column(Float, default=0.0)
@@ -75,13 +88,18 @@ class Product(Base):
     category = relationship("ProductCategory", back_populates="products")
     moves = relationship("StockMove", back_populates="product")
 
+
 class OperationDocument(Base):
     __tablename__ = "operation_documents"
     id = Column(Integer, primary_key=True, index=True)
-    doc_number = Column(String, unique=True, index=True, nullable=False) # e.g. REC-2026-001, DEL-2026-001
-    doc_type = Column(String, nullable=False) # receipt, delivery, internal, adjustment
-    status = Column(String, default=DocStatus.DRAFT) # draft, waiting, ready, done, canceled
-    partner_name = Column(String, nullable=True) # Vendor name or Customer name
+    doc_number = Column(
+        String, unique=True, index=True, nullable=False
+    )  # e.g. REC-2026-001, DEL-2026-001
+    doc_type = Column(String, nullable=False)  # receipt, delivery, internal, adjustment
+    status = Column(
+        String, default=DocStatus.DRAFT
+    )  # draft, waiting, ready, done, canceled
+    partner_name = Column(String, nullable=True)  # Vendor name or Customer name
     source_location_id = Column(Integer, ForeignKey("locations.id"), nullable=True)
     dest_location_id = Column(Integer, ForeignKey("locations.id"), nullable=True)
     notes = Column(Text, nullable=True)
@@ -91,7 +109,10 @@ class OperationDocument(Base):
     source_location = relationship("Location", foreign_keys=[source_location_id])
     dest_location = relationship("Location", foreign_keys=[dest_location_id])
     user = relationship("User")
-    moves = relationship("StockMove", back_populates="document", cascade="all, delete-orphan")
+    moves = relationship(
+        "StockMove", back_populates="document", cascade="all, delete-orphan"
+    )
+
 
 class StockMove(Base):
     __tablename__ = "stock_moves"
@@ -101,7 +122,7 @@ class StockMove(Base):
     source_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
     dest_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
     quantity = Column(Float, nullable=False)
-    status = Column(String, default=DocStatus.DONE) # done or canceled
+    status = Column(String, default=DocStatus.DONE)  # done or canceled
     reference = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 

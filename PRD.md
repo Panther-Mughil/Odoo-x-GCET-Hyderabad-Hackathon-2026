@@ -1,4 +1,4 @@
-# StockSense — Enterprise Modular Inventory Management System (IMS)
+# StockSense - Enterprise Modular Inventory Management System (IMS)
 ### Comprehensive Product Requirements Document (PRD) & Technical Specification
 
 ---
@@ -237,19 +237,19 @@ erDiagram
 
 ## 7. Implementation Roadmap & Milestones
 
-1. **Milestone 1 — Core Foundation & Git Remote**:
+1. **Milestone 1 - Core Foundation & Git Remote**:
    - Connect GitHub repository and push baseline configuration, `.gitignore`, and PRD.
-2. **Milestone 2 — Database Models & Double-Entry Engine**:
+2. **Milestone 2 - Database Models & Double-Entry Engine**:
    - Implement SQLAlchemy models (`Product`, `Warehouse`, `Location`, `OperationDocument`, `StockMove`, `User`, `OTPRequest`).
    - Create transactional helper functions that enforce stock integrity.
-3. **Milestone 3 — FastAPI RESTful API Endpoints**:
+3. **Milestone 3 - FastAPI RESTful API Endpoints**:
    - Auth & OTP endpoints.
    - Operations API: Receipts, Deliveries, Transfers, Adjustments.
    - Dynamic Filter & Analytics KPIs endpoint.
-4. **Milestone 4 — Modern Enterprise Web UI**:
+4. **Milestone 4 - Modern Enterprise Web UI**:
    - Responsive Glassmorphic Dashboard with dark/light themes.
    - Interactive operations forms, pick/pack/validate buttons, live badge updates.
    - Barcode/SKU quick-scanner interface for mobile warehouse staff.
-5. **Milestone 5 — Validation, Demo Data & Continuous GitHub Pushing**:
+5. **Milestone 5 - Validation, Demo Data & Continuous GitHub Pushing**:
    - Seed realistic demo data matching the problem statement example (100 kg Steel, internal moves, deliveries, adjustments).
    - Test every workflow end-to-end and push completed commits to GitHub.

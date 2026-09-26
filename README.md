@@ -1,4 +1,4 @@
-# StockSense — Enterprise Modular Inventory Management System (IMS)
+# StockSense - Enterprise Modular Inventory Management System (IMS)
 
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688.svg?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB.svg?style=flat&logo=python)](https://python.org)

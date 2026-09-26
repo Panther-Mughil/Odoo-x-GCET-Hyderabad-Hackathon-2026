@@ -1,4 +1,4 @@
-# 👥 StockSense — 3-Member Team Division & Implementation Roadmap
+# 👥 StockSense - 3-Member Team Division & Implementation Roadmap
 
 To win this hackathon, we divide the project into **3 clearly isolated, parallel tracks** so no two members block each other. Each member owns an essential piece with defined inputs and outputs.
 

@@ -680,7 +680,7 @@ function populateModalDropdowns() {
     state.products.forEach(p => {
       const opt = document.createElement("option");
       opt.value = p.id;
-      opt.innerText = `${p.sku} — ${p.name} (${p.on_hand} ${p.uom} on-hand)`;
+      opt.innerText = `${p.sku} - ${p.name} (${p.on_hand} ${p.uom} on-hand)`;
       sel.appendChild(opt);
     });
   });
