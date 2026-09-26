@@ -3,426 +3,1124 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StockSense — Enterprise Modular Inventory Management</title>
-  <!-- Google Fonts -->
+  <title>StockSense — Enterprise Inventory Management System</title>
+  <!-- Google Fonts Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- Chart.js CDN -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="stylesheet" href="/static/css/style.css">
+  <!-- Enterprise Light Stylesheet -->
+  <link rel="stylesheet" href="/static/css/enterprise.css">
 </head>
 <body>
 
-  <!-- Navigation Sidebar -->
-  <aside class="sidebar">
-    <div class="brand">
-      <div class="brand-icon">📦</div>
-      <div>
-        <div class="brand-title">StockSense</div>
-        <div class="brand-subtitle">Double-Entry IMS</div>
+  <!-- LEFT SIDEBAR -->
+  <aside class="app-sidebar" id="appSidebar">
+    <div class="sidebar-header">
+      <div class="brand-wrapper">
+        <div class="brand-icon">S</div>
+        <div class="brand-text">
+          <h1>StockSense</h1>
+          <p>Enterprise IMS</p>
+        </div>
       </div>
     </div>
 
-    <ul class="nav-links">
-      <li class="nav-item active" onclick="switchTab('dashboard')">
-        <span>📊</span> Dashboard View
-      </li>
-      <li class="nav-item" onclick="switchTab('products')">
-        <span>🏷️</span> Products & Stocks
-      </li>
-      <li class="nav-item" onclick="switchTab('operations')">
-        <span>⚡</span> Operations Flow
-      </li>
-      <li class="nav-item" onclick="switchTab('ledger')">
-        <span>📜</span> Stock Move Ledger
-      </li>
-      <li class="nav-item" onclick="switchTab('scanner')">
-        <span>📱</span> Warehouse Barcode UI
-      </li>
-      <li class="nav-item" onclick="switchTab('topology')">
-        <span>🏭</span> Warehouses & Racks
-      </li>
-    </ul>
-
-    <div class="sidebar-profile">
-      <div class="profile-info">
-        <span class="profile-name" id="user-display-name">Alex Vance</span>
-        <span class="profile-role" id="user-display-role">Inventory Manager</span>
+    <div class="sidebar-nav">
+      <!-- Section: Main -->
+      <div class="nav-section">
+        <div class="nav-section-title">Main</div>
+        <ul class="nav-list">
+          <li class="nav-link active" onclick="navigate('dashboard')">
+            <div class="nav-link-left">
+              <span class="icon">📊</span>
+              <span>Dashboard</span>
+            </div>
+          </li>
+          <li class="nav-link" onclick="navigate('products')">
+            <div class="nav-link-left">
+              <span class="icon">📦</span>
+              <span>Products</span>
+            </div>
+            <span class="nav-badge" id="sidebar-prod-count">100+</span>
+          </li>
+          <li class="nav-link" onclick="navigate('receipts')">
+            <div class="nav-link-left">
+              <span class="icon">📥</span>
+              <span>Receipts</span>
+            </div>
+            <span class="nav-badge" id="sidebar-rec-badge">14</span>
+          </li>
+          <li class="nav-link" onclick="navigate('deliveries')">
+            <div class="nav-link-left">
+              <span class="icon">🚚</span>
+              <span>Deliveries</span>
+            </div>
+            <span class="nav-badge" id="sidebar-del-badge">23</span>
+          </li>
+          <li class="nav-link" onclick="navigate('transfers')">
+            <div class="nav-link-left">
+              <span class="icon">🔄</span>
+              <span>Internal Transfers</span>
+            </div>
+          </li>
+          <li class="nav-link" onclick="navigate('adjustments')">
+            <div class="nav-link-left">
+              <span class="icon">⚖️</span>
+              <span>Stock Adjustments</span>
+            </div>
+          </li>
+          <li class="nav-link" onclick="navigate('ledger')">
+            <div class="nav-link-left">
+              <span class="icon">📜</span>
+              <span>Double-Entry Ledger</span>
+            </div>
+          </li>
+        </ul>
       </div>
-      <button class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px;" onclick="openAuthModal()">Switch</button>
+
+      <!-- Section: Operations -->
+      <div class="nav-section">
+        <div class="nav-section-title">Operations</div>
+        <ul class="nav-list">
+          <li class="nav-link" onclick="navigate('scanner')">
+            <div class="nav-link-left">
+              <span class="icon">📱</span>
+              <span>Barcode Scanner</span>
+            </div>
+          </li>
+          <li class="nav-link" onclick="navigate('reorder')">
+            <div class="nav-link-left">
+              <span class="icon">⚠️</span>
+              <span>Reorder Rules</span>
+            </div>
+            <span class="nav-badge danger" id="sidebar-reorder-count">37</span>
+          </li>
+          <li class="nav-link" onclick="navigate('warehouses')">
+            <div class="nav-link-left">
+              <span class="icon">🏭</span>
+              <span>Warehouses & Racks</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Section: Administration -->
+      <div class="nav-section">
+        <div class="nav-section-title">Administration</div>
+        <ul class="nav-list">
+          <li class="nav-link" onclick="navigate('audit')">
+            <div class="nav-link-left">
+              <span class="icon">🛡️</span>
+              <span>Audit Log</span>
+            </div>
+          </li>
+          <li class="nav-link" onclick="openAuthModal()">
+            <div class="nav-link-left">
+              <span class="icon">🔑</span>
+              <span>OTP Auth & Reset</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Sidebar Footer -->
+    <div class="sidebar-footer">
+      <div class="system-status">
+        <div class="status-dot"></div>
+        <span>All Systems Operational</span>
+      </div>
+      <div class="user-tile">
+        <div class="user-tile-left">
+          <div class="user-avatar" id="avatarLetter">A</div>
+          <div class="user-meta">
+            <h4 id="userNameDisplay">Alex Vance</h4>
+            <p id="userRoleDisplay">Inventory Manager</p>
+          </div>
+        </div>
+        <button class="btn btn-sm btn-default" style="padding: 4px 8px; font-size: 11px;" onclick="toggleUserRole()">Switch</button>
+      </div>
     </div>
   </aside>
 
-  <!-- Main Content Area -->
-  <main class="main-wrapper">
-
-    <!-- Top Action Bar -->
-    <header class="top-header">
-      <div>
-        <h1 class="page-title" id="page-title">Inventory Dashboard</h1>
-        <p class="page-desc" id="page-desc">Real-time double-entry stock transactions, ledger audit & floor alerts</p>
+  <!-- MAIN WRAPPER -->
+  <main class="app-main">
+    <!-- TOP HEADER -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="breadcrumb-trail">
+          <span>Inventory</span>
+          <span>/</span>
+          <span class="active" id="breadcrumbActive">Dashboard</span>
+        </div>
+        <div class="global-search-box">
+          <span style="color: var(--text-muted); font-size: 14px;">🔍</span>
+          <input type="text" id="globalSearchInput" placeholder="Search SKU, Product, Barcode, Move ID..." oninput="handleGlobalSearch(this.value)">
+        </div>
       </div>
-      <div style="display: flex; gap: 12px;">
-        <button class="btn btn-secondary" onclick="openAdjustmentModal()">⚖️ Stock Adjustment</button>
-        <button class="btn btn-secondary" onclick="openTransferModal()">🔄 Internal Transfer</button>
-        <button class="btn btn-primary" onclick="openReceiptModal()">➕ New Receipt</button>
+
+      <div class="header-right">
+        <!-- Live Data Indicator -->
+        <span class="badge badge-success" style="font-size: 11px;">🟢 Live Data</span>
+        <!-- Warehouse Selector -->
+        <div class="warehouse-pill">
+          <span>🏭</span>
+          <select id="headerWarehouseSelect" onchange="handleWarehouseChange(this.value)">
+            <option value="all">All Warehouses (Global)</option>
+            <option value="WH1">Main Central Logistics (Chennai)</option>
+            <option value="WH2">Production & Assembly Hub</option>
+            <option value="WH3">North Distribution Center</option>
+          </select>
+        </div>
+        <!-- Quick Action Button -->
+        <div style="position: relative;">
+          <button class="btn btn-primary" onclick="toggleQuickMenu()">+ New Operation ▾</button>
+          <div id="quickActionMenu" style="display: none; position: absolute; right: 0; top: 110%; background: #ffffff; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); box-shadow: var(--shadow-lg); width: 200px; z-index: 1000; padding: 6px 0;">
+            <div style="padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer;" onclick="openReceiptModal(); toggleQuickMenu();">📥 Receive Stock</div>
+            <div style="padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer;" onclick="openDeliveryModal(); toggleQuickMenu();">🚚 Create Delivery</div>
+            <div style="padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer;" onclick="openTransferModal(); toggleQuickMenu();">🔄 Internal Transfer</div>
+            <div style="padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer;" onclick="openAdjustmentModal(); toggleQuickMenu();">⚖️ Stock Adjustment</div>
+          </div>
+        </div>
       </div>
     </header>
 
-    <!-- TAB 1: DASHBOARD -->
-    <section id="tab-dashboard" class="content-tab">
-      <!-- 5 Key Dashboard KPIs -->
-      <div class="kpi-grid">
-        <div class="kpi-card">
-          <div class="kpi-header">
-            <span class="kpi-title">Total Products in Stock</span>
-            <span class="kpi-icon">📦</span>
+    <!-- CONTENT SECTIONS -->
+    <div class="page-container">
+
+      <!-- ================= 1. DASHBOARD ================= -->
+      <section id="view-dashboard" class="page-view">
+        <div class="page-header-row">
+          <div class="page-title-block">
+            <h2>Inventory Overview</h2>
+            <p>Real-time visibility across your warehouses, double-entry stock operations and safety thresholds.</p>
           </div>
-          <div class="kpi-value" id="kpi-total-units">0</div>
-          <div class="kpi-sub" id="kpi-sku-count">Across 0 distinct SKUs</div>
-        </div>
-
-        <div class="kpi-card" style="border-left: 4px solid var(--accent-danger);">
-          <div class="kpi-header">
-            <span class="kpi-title">Low / Out of Stock</span>
-            <span class="kpi-icon">⚠️</span>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn btn-default" onclick="openTransferModal()">🔄 Transfer Stock</button>
+            <button class="btn btn-primary" onclick="openReceiptModal()">+ Receive Goods</button>
           </div>
-          <div class="kpi-value" id="kpi-low-stock" style="color: #f87171;">0</div>
-          <div class="kpi-sub"><span class="kpi-badge badge-danger">Needs Reorder</span></div>
         </div>
 
-        <div class="kpi-card">
-          <div class="kpi-header">
-            <span class="kpi-title">Pending Receipts</span>
-            <span class="kpi-icon">📥</span>
+        <!-- 6 Enterprise KPI Cards -->
+        <div class="kpi-row">
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-title">Total Stock</span>
+              <div class="kpi-icon blue">📦</div>
+            </div>
+            <div class="kpi-value" id="kpiTotalStock">24,892 <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">units</span></div>
+            <div class="kpi-foot">
+              <span class="kpi-trend-up">↑ +12.4%</span>
+              <span style="color: var(--text-muted);">vs last month</span>
+            </div>
           </div>
-          <div class="kpi-value" id="kpi-pending-receipts">0</div>
-          <div class="kpi-sub">Incoming from vendors</div>
-        </div>
 
-        <div class="kpi-card">
-          <div class="kpi-header">
-            <span class="kpi-title">Pending Deliveries</span>
-            <span class="kpi-icon">🚚</span>
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-title">Inventory Value</span>
+              <div class="kpi-icon green">₹</div>
+            </div>
+            <div class="kpi-value" id="kpiInventoryValue">₹48.60 L</div>
+            <div class="kpi-foot">
+              <span class="kpi-trend-up">↑ +4.2%</span>
+              <span style="color: var(--text-muted);">asset valuation</span>
+            </div>
           </div>
-          <div class="kpi-value" id="kpi-pending-deliveries">0</div>
-          <div class="kpi-sub">Ready to pick & pack</div>
-        </div>
 
-        <div class="kpi-card">
-          <div class="kpi-header">
-            <span class="kpi-title">Internal Transfers</span>
-            <span class="kpi-icon">🔁</span>
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-title">Low Stock</span>
+              <div class="kpi-icon amber">⚠️</div>
+            </div>
+            <div class="kpi-value" id="kpiLowStock" style="color: var(--warning);">37 items</div>
+            <div class="kpi-foot">
+              <span class="kpi-trend-down">↓ 3 items</span>
+              <span style="color: var(--text-muted);">from yesterday</span>
+            </div>
           </div>
-          <div class="kpi-value" id="kpi-internal-transfers">0</div>
-          <div class="kpi-sub">Scheduled rack movements</div>
-        </div>
-      </div>
 
-      <!-- Quick Floor Scanner Simulation Bar -->
-      <div class="scanner-card">
-        <div>
-          <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 4px;">⚡ Rapid Barcode / SKU Floor Inspector</h3>
-          <p style="font-size: 13px; color: var(--text-muted);">Scan or enter a product SKU to view instant location breakdown and available on-hand quantities</p>
-        </div>
-        <div style="display: flex; gap: 10px;">
-          <input type="text" id="quick-sku-input" class="text-input" placeholder="e.g. STL-100-KG or CHR-ERG-BLK" style="width: 250px;">
-          <button class="btn btn-primary" onclick="inspectSku()">Inspect</button>
-        </div>
-      </div>
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-title">Out of Stock</span>
+              <div class="kpi-icon red">⛔</div>
+            </div>
+            <div class="kpi-value" id="kpiOutOfStock" style="color: var(--danger);">8 items</div>
+            <div class="kpi-foot">
+              <span class="badge badge-danger">Immediate action</span>
+            </div>
+          </div>
 
-      <!-- Category Chart & Live Movements -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;">
-        <div class="table-container" style="padding: 20px;">
-          <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 16px;">📊 Stock Distribution by Category</h3>
-          <canvas id="categoryChart" height="200"></canvas>
-        </div>
-        <div class="table-container" style="padding: 20px;">
-          <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 16px;">📈 Operations Volume by Document Type</h3>
-          <canvas id="operationsChart" height="200"></canvas>
-        </div>
-      </div>
-    </section>
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-title">Pending Receipts</span>
+              <div class="kpi-icon cyan">📥</div>
+            </div>
+            <div class="kpi-value" id="kpiPendingReceipts">14</div>
+            <div class="kpi-foot">
+              <span style="color: var(--text-muted);">From 6 vendors</span>
+            </div>
+          </div>
 
-    <!-- TAB 2: PRODUCTS -->
-    <section id="tab-products" class="content-tab" style="display: none;">
-      <!-- Dynamic Filter Bar -->
-      <div class="filter-bar">
-        <div class="filter-group">
-          <span class="filter-label">Search:</span>
-          <input type="text" id="prod-search-input" class="text-input" placeholder="Search by SKU or Name..." oninput="loadProducts()">
-        </div>
-        <div class="filter-group">
-          <span class="filter-label">Category:</span>
-          <select id="prod-category-filter" class="select-input" onchange="loadProducts()">
-            <option value="all">All Categories</option>
-            <option value="Raw Metals">Raw Metals</option>
-            <option value="Furniture & Frames">Furniture & Frames</option>
-            <option value="Hardware & Fasteners">Hardware & Fasteners</option>
-          </select>
-        </div>
-        <button class="btn btn-primary" onclick="openProductModal()">➕ Create Product</button>
-      </div>
-
-      <div class="table-container">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>SKU / Code</th>
-              <th>Product Name</th>
-              <th>Category</th>
-              <th>On Hand</th>
-              <th>Min Reorder</th>
-              <th>Target Stock</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="products-table-body">
-            <!-- Rendered dynamically -->
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- TAB 3: OPERATIONS FLOW -->
-    <section id="tab-operations" class="content-tab" style="display: none;">
-      <div class="filter-bar">
-        <div class="filter-group">
-          <span class="filter-label">Document Type:</span>
-          <select id="op-type-filter" class="select-input" onchange="loadOperations()">
-            <option value="all">All Document Types</option>
-            <option value="receipt">Receipts (Incoming)</option>
-            <option value="delivery">Delivery Orders (Outgoing)</option>
-            <option value="internal">Internal Transfers</option>
-            <option value="adjustment">Stock Adjustments</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <span class="filter-label">Status:</span>
-          <select id="op-status-filter" class="select-input" onchange="loadOperations()">
-            <option value="all">All Statuses</option>
-            <option value="ready">Ready</option>
-            <option value="done">Done</option>
-            <option value="draft">Draft</option>
-          </select>
-        </div>
-        <div style="display: flex; gap: 8px;">
-          <button class="btn btn-secondary" onclick="openDeliveryModal()">🚚 New Delivery</button>
-          <button class="btn btn-primary" onclick="openReceiptModal()">📥 New Receipt</button>
-        </div>
-      </div>
-
-      <div class="table-container">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Doc Number</th>
-              <th>Type</th>
-              <th>Partner / Reason</th>
-              <th>Source Location</th>
-              <th>Destination Location</th>
-              <th>Date</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="operations-table-body">
-            <!-- Rendered dynamically -->
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- TAB 4: STOCK MOVE LEDGER -->
-    <section id="tab-ledger" class="content-tab" style="display: none;">
-      <div class="table-container">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Date & Time</th>
-              <th>Reference</th>
-              <th>Product SKU</th>
-              <th>Product Name</th>
-              <th>Quantity Moved</th>
-              <th>From (Source)</th>
-              <th>To (Destination)</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="ledger-table-body">
-            <!-- Rendered dynamically -->
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- TAB 5: WAREHOUSE BARCODE UI -->
-    <section id="tab-scanner" class="content-tab" style="display: none;">
-      <div style="max-width: 600px; margin: 0 auto; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 32px; box-shadow: var(--shadow-card);">
-        <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">📱 Mobile Floor Barcode Scanner</h2>
-        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px;">Simulate optical scanning by typing or selecting a barcode/SKU code.</p>
-        
-        <div class="form-group">
-          <label>Quick Select Preset SKU</label>
-          <select id="mobile-barcode-select" class="select-input" style="width: 100%;" onchange="document.getElementById('mobile-sku-val').value = this.value; runMobileScan();">
-            <option value="STL-100-KG">STL-100-KG (Structural Steel Rods)</option>
-            <option value="CHR-ERG-BLK">CHR-ERG-BLK (Ergonomic Warehouse Chairs)</option>
-            <option value="BLT-M8-100">BLT-M8-100 (M8 Industrial Bolts)</option>
-          </select>
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-title">Pending Deliveries</span>
+              <div class="kpi-icon purple">🚚</div>
+            </div>
+            <div class="kpi-value" id="kpiPendingDeliveries">23</div>
+            <div class="kpi-foot">
+              <span style="color: var(--text-muted);">Ready to pick & pack</span>
+            </div>
+          </div>
         </div>
 
-        <div class="form-group">
-          <label>Or Type Custom Barcode</label>
-          <input type="text" id="mobile-sku-val" class="text-input" value="STL-100-KG">
+        <!-- 2-Column Section: Inventory Health & Reorder Alerts -->
+        <div class="dashboard-grid-2">
+          <!-- Inventory Health Donut -->
+          <div class="card">
+            <div class="card-header">
+              <h3><span>📊</span> Inventory Health Distribution</h3>
+              <span style="font-size: 12px; color: var(--text-muted);">Live SKU Status</span>
+            </div>
+            <div class="card-body" style="display: flex; align-items: center; justify-content: space-around; gap: 20px;">
+              <div style="width: 200px; height: 200px;">
+                <canvas id="healthDonutChart"></canvas>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 10px; min-width: 220px;">
+                <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                  <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; background: #16a34a; border-radius: 2px;"></span> Healthy Stock</span>
+                  <strong>184 SKUs (78%)</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                  <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; background: #d97706; border-radius: 2px;"></span> Low Stock</span>
+                  <strong>37 SKUs (15%)</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                  <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; background: #ea580c; border-radius: 2px;"></span> Critical</span>
+                  <strong>12 SKUs (4%)</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                  <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; background: #dc2626; border-radius: 2px;"></span> Out of Stock</span>
+                  <strong>8 SKUs (3%)</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reorder Alerts -->
+          <div class="card">
+            <div class="card-header">
+              <h3><span>⚠️</span> Reorder Alerts</h3>
+              <a href="javascript:void(0)" onclick="navigate('reorder')" style="font-size: 12px; color: var(--primary); text-decoration: none; font-weight: 600;">View all alerts →</a>
+            </div>
+            <div class="card-body" style="padding: 0;">
+              <table class="erp-table">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>SKU</th>
+                    <th>Current</th>
+                    <th>Min</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboardAlertsTable">
+                  <tr>
+                    <td><strong>Wireless Optical Mouse</strong></td>
+                    <td><code>WM-1042</code></td>
+                    <td><strong style="color: var(--danger);">12</strong></td>
+                    <td>50</td>
+                    <td><span class="badge badge-danger">Critical</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>USB-C Multiport Hub</strong></td>
+                    <td><code>HUB-2201</code></td>
+                    <td><strong style="color: var(--warning);">28</strong></td>
+                    <td>40</td>
+                    <td><span class="badge badge-warning">Low</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Mechanical Keyboard</strong></td>
+                    <td><code>KB-8810</code></td>
+                    <td>62</td>
+                    <td>50</td>
+                    <td><span class="badge badge-success">Healthy</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>M8 Industrial Bolts</strong></td>
+                    <td><code>BLT-M8-100</code></td>
+                    <td><strong style="color: var(--warning);">8</strong></td>
+                    <td>15</td>
+                    <td><span class="badge badge-warning">Low</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
-        <button class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 12px;" onclick="runMobileScan()">⚡ Trigger Floor Scan</button>
-
-        <div id="mobile-scan-result" style="margin-top: 24px; display: none; background: rgba(15, 23, 42, 0.9); border: 1px solid var(--border-glow); border-radius: var(--radius-md); padding: 18px;">
-          <!-- Dynamically populated -->
+        <!-- Movement Analytics Chart -->
+        <div class="card" style="margin-bottom: 24px;">
+          <div class="card-header">
+            <h3><span>📈</span> Stock Movement</h3>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn btn-sm btn-default" onclick="updateChartRange('today')">Today</button>
+              <button class="btn btn-sm btn-primary" onclick="updateChartRange('7d')">7 Days</button>
+              <button class="btn btn-sm btn-default" onclick="updateChartRange('30d')">30 Days</button>
+              <button class="btn btn-sm btn-default" onclick="updateChartRange('3m')">3 Months</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <canvas id="movementChart" height="80"></canvas>
+          </div>
         </div>
-      </div>
-    </section>
 
-    <!-- TAB 6: WAREHOUSE TOPOLOGY -->
-    <section id="tab-topology" class="content-tab" style="display: none;">
-      <div id="topology-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
-        <!-- Rendered dynamically -->
-      </div>
-    </section>
+        <!-- Warehouse Overview Grid -->
+        <div class="page-title-block" style="margin-bottom: 14px;">
+          <h3 style="font-size: 16px; font-weight: 700;">Warehouse Topology & Utilization</h3>
+        </div>
+        <div class="dashboard-grid-warehouses">
+          <!-- Card 1 -->
+          <div class="card" style="padding: 18px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+              <div>
+                <h4 style="font-size: 14.5px; font-weight: 700;">Main Central Logistics</h4>
+                <p style="font-size: 12px; color: var(--text-muted);">Sector 4 Industrial, Chennai</p>
+              </div>
+              <span class="badge badge-info">WH1</span>
+            </div>
+            <div style="margin-bottom: 12px;">
+              <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                <span style="color: var(--text-muted);">Capacity Utilized:</span>
+                <strong>78%</strong>
+              </div>
+              <div style="height: 6px; background: #e2e8f0; border-radius: 99px; overflow: hidden;">
+                <div style="width: 78%; height: 100%; background: #2563eb;"></div>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: var(--text-secondary);">
+              <div>Units: <strong>14,210</strong></div>
+              <div>Value: <strong>₹28.4L</strong></div>
+              <div>Incoming: <strong>8 Orders</strong></div>
+              <div>Outgoing: <strong>15 Orders</strong></div>
+            </div>
+          </div>
 
+          <!-- Card 2 -->
+          <div class="card" style="padding: 18px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+              <div>
+                <h4 style="font-size: 14.5px; font-weight: 700;">Production & Assembly Hub</h4>
+                <p style="font-size: 12px; color: var(--text-muted);">Building B, Gate 2</p>
+              </div>
+              <span class="badge badge-info">WH2</span>
+            </div>
+            <div style="margin-bottom: 12px;">
+              <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                <span style="color: var(--text-muted);">Capacity Utilized:</span>
+                <strong>64%</strong>
+              </div>
+              <div style="height: 6px; background: #e2e8f0; border-radius: 99px; overflow: hidden;">
+                <div style="width: 64%; height: 100%; background: #16a34a;"></div>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: var(--text-secondary);">
+              <div>Units: <strong>7,120</strong></div>
+              <div>Value: <strong>₹14.2L</strong></div>
+              <div>Incoming: <strong>4 Orders</strong></div>
+              <div>Outgoing: <strong>6 Orders</strong></div>
+            </div>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="card" style="padding: 18px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+              <div>
+                <h4 style="font-size: 14.5px; font-weight: 700;">North Distribution Hub</h4>
+                <p style="font-size: 12px; color: var(--text-muted);">Highway Corridor, Delhi NCR</p>
+              </div>
+              <span class="badge badge-info">WH3</span>
+            </div>
+            <div style="margin-bottom: 12px;">
+              <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                <span style="color: var(--text-muted);">Capacity Utilized:</span>
+                <strong>42%</strong>
+              </div>
+              <div style="height: 6px; background: #e2e8f0; border-radius: 99px; overflow: hidden;">
+                <div style="width: 42%; height: 100%; background: #0284c7;"></div>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: var(--text-secondary);">
+              <div>Units: <strong>3,562</strong></div>
+              <div>Value: <strong>₹6.0L</strong></div>
+              <div>Incoming: <strong>2 Orders</strong></div>
+              <div>Outgoing: <strong>2 Orders</strong></div>
+            </div>
+          </div>
+
+          <!-- Card 4 (Virtual Hubs) -->
+          <div class="card" style="padding: 18px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+              <div>
+                <h4 style="font-size: 14.5px; font-weight: 700;">Partner & Virtual Points</h4>
+                <p style="font-size: 12px; color: var(--text-muted);">External System Boundaries</p>
+              </div>
+              <span class="badge badge-default">Virtual</span>
+            </div>
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Odoo double-entry boundary nodes for vendor intakes and customer dispatch.</p>
+            <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px;">
+              <div>• <code>Vendors/Incoming</code></div>
+              <div>• <code>Customers/Outgoing</code></div>
+              <div>• <code>Virtual/Loss & Scrap</code></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 2. DOUBLE-ENTRY STOCK LEDGER ================= -->
+      <section id="view-ledger" class="page-view" style="display: none;">
+        <div class="page-header-row">
+          <div class="page-title-block">
+            <h2>Double-Entry Stock Ledger</h2>
+            <p>Immutable chronological ledger: Every unit movement transfers from a <strong>Source Location → Destination Location</strong>.</p>
+          </div>
+          <button class="btn btn-default" onclick="exportLedgerCSV()">📥 Export Audit CSV</button>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3><span>📜</span> Ledger Transaction Records</h3>
+            <span style="font-size: 12px; color: var(--text-muted);">Real-Time Audit Trail</span>
+          </div>
+          <div class="card-body" style="padding: 0;">
+            <div class="table-responsive">
+              <table class="erp-table">
+                <thead>
+                  <tr>
+                    <th>Move ID</th>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Source (From)</th>
+                    <th>Destination (To)</th>
+                    <th>Operation</th>
+                    <th>Status</th>
+                    <th>Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody id="ledgerTableBody">
+                  <!-- Dynamically Rendered -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 3. RECEIPTS (INCOMING) ================= -->
+      <section id="view-receipts" class="page-view" style="display: none;">
+        <div class="page-header-row">
+          <div class="page-title-block">
+            <h2>Receipts (Incoming Goods)</h2>
+            <p>Vendor shipments intake with multi-step inspection, verification and automatic stock incrementing.</p>
+          </div>
+          <button class="btn btn-primary" onclick="openReceiptModal()">+ New Receipt</button>
+        </div>
+
+        <div class="card">
+          <div class="card-body" style="padding: 0;">
+            <table class="erp-table">
+              <thead>
+                <tr>
+                  <th>Receipt #</th>
+                  <th>Vendor</th>
+                  <th>Items & SKU</th>
+                  <th>Quantity</th>
+                  <th>Target Warehouse</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="receiptsTableBody">
+                <!-- Dynamically Rendered -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 4. DELIVERIES (OUTGOING) ================= -->
+      <section id="view-deliveries" class="page-view" style="display: none;">
+        <div class="page-header-row">
+          <div class="page-title-block">
+            <h2>Delivery Orders (Outgoing Goods)</h2>
+            <p>Multi-step customer fulfillment pipeline: <strong>Pick → Pack → Validate</strong>.</p>
+          </div>
+          <button class="btn btn-primary" onclick="openDeliveryModal()">+ Create Delivery Order</button>
+        </div>
+
+        <div class="card">
+          <div class="card-body" style="padding: 0;">
+            <table class="erp-table">
+              <thead>
+                <tr>
+                  <th>Order #</th>
+                  <th>Customer</th>
+                  <th>Item Details</th>
+                  <th>Source Warehouse</th>
+                  <th>Fulfillment Progress</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="deliveriesTableBody">
+                <!-- Dynamically Rendered -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 5. INTERNAL TRANSFERS ================= -->
+      <section id="view-transfers" class="page-view" style="display: none;">
+        <div class="page-header-row">
+          <div class="page-title-block">
+            <h2>Internal Warehouse Transfers</h2>
+            <p>Move stock between warehouses, production racks, and bin locations with zero company net inventory loss.</p>
+          </div>
+          <button class="btn btn-primary" onclick="openTransferModal()">🔄 Initiate Transfer</button>
+        </div>
+
+        <div class="card">
+          <div class="card-body" style="padding: 0;">
+            <table class="erp-table">
+              <thead>
+                <tr>
+                  <th>Transfer #</th>
+                  <th>Movement Path</th>
+                  <th>Product</th>
+                  <th>Quantity</th>
+                  <th>Date Logged</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="transfersTableBody">
+                <!-- Dynamically Rendered -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 6. STOCK ADJUSTMENTS ================= -->
+      <section id="view-adjustments" class="page-view" style="display: none;">
+        <div class="page-header-row">
+          <div class="page-title-block">
+            <h2>Physical Stock Adjustment</h2>
+            <p>Cycle counts and inventory audit reconciliation: Compare <strong>System Recorded vs Counted Physical Stock</strong>.</p>
+          </div>
+          <button class="btn btn-primary" onclick="openAdjustmentModal()">⚖️ New Stock Count</button>
+        </div>
+
+        <div class="card">
+          <div class="card-body" style="padding: 0;">
+            <table class="erp-table">
+              <thead>
+                <tr>
+                  <th>Adjustment Doc</th>
+                  <th>Audit Location</th>
+                  <th>Product Audited</th>
+                  <th>Variance / Diff</th>
+                  <th>Reason Category</th>
+                  <th>Audit Date</th>
+                  <th>Ledger Write-Off</th>
+                </tr>
+              </thead>
+              <tbody id="adjustmentsTableBody">
+                <!-- Dynamically Rendered -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 7. PRODUCTS CATALOG ================= -->
+      <section id="view-products" class="page-view" style="display: none;">
+        <div class="page-header-row">
+          <div class="page-title-block">
+            <h2>Product Catalog & Inventory Valuation</h2>
+            <p>Comprehensive SKU repository, unit costs, safety stocks and real-time on-hand rack balances.</p>
+          </div>
+          <button class="btn btn-primary" onclick="openCreateProductModal()">+ Create Product</button>
+        </div>
+
+        <div class="card">
+          <div class="card-body" style="padding: 0;">
+            <table class="erp-table">
+              <thead>
+                <tr>
+                  <th>SKU / Barcode</th>
+                  <th>Product Name</th>
+                  <th>Category</th>
+                  <th>Unit Cost</th>
+                  <th>On Hand</th>
+                  <th>Min Reorder</th>
+                  <th>Target Stock</th>
+                  <th>Stock Health</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="productsTableBody">
+                <!-- Dynamically Rendered -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 8. BARCODE SCANNER ================= -->
+      <section id="view-scanner" class="page-view" style="display: none;">
+        <div class="page-header-row">
+          <div class="page-title-block">
+            <h2>Mobile-First Barcode Floor Scanner</h2>
+            <p>High-speed optical scanning simulation for picking, receiving, rack verification and cycle counts.</p>
+          </div>
+        </div>
+
+        <div style="max-width: 680px; margin: 0 auto;">
+          <div class="scanner-viewport">
+            <div class="laser-line"></div>
+            <div style="font-size: 42px; margin-bottom: 8px;">📷</div>
+            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 4px;">Aim Barcode at Camera</h3>
+            <p style="font-size: 12.5px; color: #94a3b8;">Supports UPC-A, Code128, EAN-13, and custom alphanumeric SKU codes</p>
+          </div>
+
+          <div class="card" style="padding: 24px;">
+            <div class="form-item">
+              <label>Select or Enter SKU Code to Simulate Scanner Event:</label>
+              <div style="display: flex; gap: 10px;">
+                <input type="text" id="barcodeScanInput" class="form-control" value="STL-100-KG" style="font-family: var(--font-mono); font-weight: 600;">
+                <button class="btn btn-primary" onclick="executeBarcodeScan()">⚡ Scan</button>
+              </div>
+            </div>
+
+            <!-- Scan Output Card -->
+            <div id="scannerResultBox" style="display: none; border-top: 1px solid var(--border-subtle); padding-top: 16px; margin-top: 16px;">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 9. REORDER RULES ================= -->
+      <section id="view-reorder" class="page-view" style="display: none;">
+        <div class="page-header-row">
+          <div class="page-title-block">
+            <h2>Automated Reordering & Stockout Prevention</h2>
+            <p>Smart replenishment suggestions computed based on current stock vs defined safety thresholds.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body" style="padding: 0;">
+            <table class="erp-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>SKU</th>
+                  <th>Current Stock</th>
+                  <th>Min Safety Level</th>
+                  <th>Target Level</th>
+                  <th>Replenishment Qty</th>
+                  <th>Est. Cost</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="reorderTableBody">
+                <!-- Dynamically Rendered -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 10. WAREHOUSES & RACKS ================= -->
+      <section id="view-warehouses" class="page-view" style="display: none;">
+        <div class="page-header-row">
+          <div class="page-title-block">
+            <h2>Warehouse & Location Topology</h2>
+            <p>Visual tree of physical storage zones, internal racks, shelves, and virtual system endpoints.</p>
+          </div>
+        </div>
+
+        <div id="warehouseTopologyGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px;">
+          <!-- Dynamically Rendered -->
+        </div>
+      </section>
+
+      <!-- ================= 11. AUDIT LOG ================= -->
+      <section id="view-audit" class="page-view" style="display: none;">
+        <div class="page-header-row">
+          <div class="page-title-block">
+            <h2>Enterprise Audit Trail</h2>
+            <p>Tamper-evident system activity log with actor details, timestamps, IP addresses and transaction references.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body" style="padding: 0;">
+            <table class="erp-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Actor / User</th>
+                  <th>Action Event</th>
+                  <th>Entity Reference</th>
+                  <th>Delta / Impact</th>
+                  <th>Location</th>
+                  <th>IP Address</th>
+                </tr>
+              </thead>
+              <tbody id="auditTableBody">
+                <!-- Dynamically Rendered -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
   </main>
 
-  <!-- MODAL: NEW RECEIPT -->
-  <div id="modal-receipt" class="modal-overlay">
-    <div class="modal-box">
-      <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">📥 New Incoming Goods Receipt</h3>
-      <div class="form-group">
-        <label>Vendor / Supplier Name</label>
-        <input type="text" id="rec-vendor-name" placeholder="e.g. ArcelorMittal Steel Ltd">
+  <!-- ================= SLIDE-OUT DETAIL DRAWER ================= -->
+  <div class="drawer-backdrop" id="detailDrawerBackdrop" onclick="closeDrawer()"></div>
+  <aside class="drawer-panel" id="detailDrawerPanel">
+    <div class="drawer-header">
+      <h3 id="drawerTitle">Movement Details</h3>
+      <button class="btn btn-sm btn-default" onclick="closeDrawer()">✕ Close</button>
+    </div>
+    <div class="drawer-content" id="drawerBody">
+      <!-- Populated dynamically -->
+    </div>
+  </aside>
+
+  <!-- ================= MODAL: NEW RECEIPT ================= -->
+  <div class="modal-backdrop" id="modalReceipt">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>📥 Receive Stock (Incoming Shipment)</h3>
+        <button class="btn btn-sm btn-default" onclick="closeModal('modalReceipt')">✕</button>
       </div>
-      <div class="form-group">
-        <label>Destination Warehouse Location</label>
-        <select id="rec-dest-location">
-          <option value="1">WH1/Main Store</option>
-          <option value="2">WH1/Rack A</option>
-          <option value="3">WH1/Rack B</option>
-          <option value="4">WH2/Production Rack</option>
-        </select>
+      <div class="modal-body">
+        <div class="stepper-row">
+          <div class="stepper-step completed">
+            <div class="step-circle">1</div>
+            <div class="step-label">Vendor</div>
+          </div>
+          <div class="stepper-step completed">
+            <div class="step-circle">2</div>
+            <div class="step-label">Items</div>
+          </div>
+          <div class="stepper-step active">
+            <div class="step-circle">3</div>
+            <div class="step-label">Validate</div>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-item">
+            <label>Vendor / Supplier</label>
+            <input type="text" id="modalRecVendor" class="form-control" value="TechSource India">
+          </div>
+          <div class="form-item">
+            <label>Destination Location</label>
+            <select id="modalRecLocation" class="form-control">
+              <option value="1">WH1/Main Store (Chennai)</option>
+              <option value="2">WH1/Rack A</option>
+              <option value="3">WH1/Rack B</option>
+              <option value="4">WH2/Production Rack</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-item">
+            <label>Select Product</label>
+            <select id="modalRecProduct" class="form-control"></select>
+          </div>
+          <div class="form-item">
+            <label>Quantity Received</label>
+            <input type="number" id="modalRecQty" class="form-control" value="50" min="1">
+          </div>
+        </div>
       </div>
-      <div class="form-group">
-        <label>Product</label>
-        <select id="rec-product-select"></select>
-      </div>
-      <div class="form-group">
-        <label>Quantity Received</label>
-        <input type="number" id="rec-quantity" value="50" min="1">
-      </div>
-      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
-        <button class="btn btn-secondary" onclick="closeModal('modal-receipt')">Cancel</button>
-        <button class="btn btn-primary" onclick="submitReceipt()">Validate & Increment Stock</button>
+      <div class="modal-footer">
+        <button class="btn btn-default" onclick="closeModal('modalReceipt')">Cancel</button>
+        <button class="btn btn-primary" onclick="submitModalReceipt()">Confirm & Update Ledger</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: NEW DELIVERY -->
-  <div id="modal-delivery" class="modal-overlay">
-    <div class="modal-box">
-      <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">🚚 Customer Delivery Order</h3>
-      <div class="form-group">
-        <label>Customer Name</label>
-        <input type="text" id="del-customer-name" placeholder="e.g. Metro Frame Works Inc">
+  <!-- ================= MODAL: NEW DELIVERY ================= -->
+  <div class="modal-backdrop" id="modalDelivery">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🚚 Create Delivery Order (Outgoing Shipment)</h3>
+        <button class="btn btn-sm btn-default" onclick="closeModal('modalDelivery')">✕</button>
       </div>
-      <div class="form-group">
-        <label>Source Warehouse Location</label>
-        <select id="del-source-location">
-          <option value="1">WH1/Main Store</option>
-          <option value="4">WH2/Production Rack</option>
-          <option value="2">WH1/Rack A</option>
-        </select>
+      <div class="modal-body">
+        <div class="stepper-row">
+          <div class="stepper-step completed">
+            <div class="step-circle">✓</div>
+            <div class="step-label">Pick</div>
+          </div>
+          <div class="stepper-step active">
+            <div class="step-circle">2</div>
+            <div class="step-label">Pack</div>
+          </div>
+          <div class="stepper-step">
+            <div class="step-circle">3</div>
+            <div class="step-label">Validate</div>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-item">
+            <label>Customer Name</label>
+            <input type="text" id="modalDelCustomer" class="form-control" value="Metro Supplies Mumbai">
+          </div>
+          <div class="form-item">
+            <label>Source Location</label>
+            <select id="modalDelLocation" class="form-control">
+              <option value="1">WH1/Main Store</option>
+              <option value="4">WH2/Production Rack</option>
+              <option value="2">WH1/Rack A</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-item">
+            <label>Select Product</label>
+            <select id="modalDelProduct" class="form-control"></select>
+          </div>
+          <div class="form-item">
+            <label>Quantity to Deliver</label>
+            <input type="number" id="modalDelQty" class="form-control" value="10" min="1">
+          </div>
+        </div>
       </div>
-      <div class="form-group">
-        <label>Product</label>
-        <select id="del-product-select"></select>
-      </div>
-      <div class="form-group">
-        <label>Quantity to Deliver</label>
-        <input type="number" id="del-quantity" value="10" min="1">
-      </div>
-      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
-        <button class="btn btn-secondary" onclick="closeModal('modal-delivery')">Cancel</button>
-        <button class="btn btn-primary" onclick="submitDelivery()">Pick, Pack & Validate</button>
+      <div class="modal-footer">
+        <button class="btn btn-default" onclick="closeModal('modalDelivery')">Cancel</button>
+        <button class="btn btn-primary" onclick="submitModalDelivery()">Pick, Pack & Validate</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: INTERNAL TRANSFER -->
-  <div id="modal-transfer" class="modal-overlay">
-    <div class="modal-box">
-      <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">🔄 Internal Warehouse Transfer</h3>
-      <div class="form-group">
-        <label>Source Location</label>
-        <select id="trans-source-location">
-          <option value="1">WH1/Main Store</option>
-          <option value="4">WH2/Production Rack</option>
-        </select>
+  <!-- ================= MODAL: INTERNAL TRANSFER ================= -->
+  <div class="modal-backdrop" id="modalTransfer">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🔄 Internal Stock Movement</h3>
+        <button class="btn btn-sm btn-default" onclick="closeModal('modalTransfer')">✕</button>
       </div>
-      <div class="form-group">
-        <label>Destination Location</label>
-        <select id="trans-dest-location">
-          <option value="4">WH2/Production Rack</option>
-          <option value="1">WH1/Main Store</option>
-          <option value="2">WH1/Rack A</option>
-          <option value="3">WH1/Rack B</option>
-        </select>
+      <div class="modal-body">
+        <div style="background: var(--bg-surface-subtle); padding: 12px; border-radius: var(--radius-sm); margin-bottom: 16px; font-size: 12.5px; color: var(--text-secondary);">
+          <strong>Double-Entry Guarantee:</strong> Moves stock between internal racks with zero company net inventory loss.
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-item">
+            <label>Source Rack (From)</label>
+            <select id="modalTransSource" class="form-control">
+              <option value="1">WH1/Main Store (Chennai)</option>
+              <option value="4">WH2/Production Rack</option>
+              <option value="2">WH1/Rack A</option>
+            </select>
+          </div>
+          <div class="form-item">
+            <label>Destination Rack (To)</label>
+            <select id="modalTransDest" class="form-control">
+              <option value="4">WH2/Production Rack</option>
+              <option value="1">WH1/Main Store (Chennai)</option>
+              <option value="2">WH1/Rack A</option>
+              <option value="3">WH1/Rack B</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-item">
+            <label>Product</label>
+            <select id="modalTransProduct" class="form-control"></select>
+          </div>
+          <div class="form-item">
+            <label>Quantity to Move</label>
+            <input type="number" id="modalTransQty" class="form-control" value="15" min="1">
+          </div>
+        </div>
       </div>
-      <div class="form-group">
-        <label>Product</label>
-        <select id="trans-product-select"></select>
-      </div>
-      <div class="form-group">
-        <label>Transfer Quantity</label>
-        <input type="number" id="trans-quantity" value="15" min="1">
-      </div>
-      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
-        <button class="btn btn-secondary" onclick="closeModal('modal-transfer')">Cancel</button>
-        <button class="btn btn-primary" onclick="submitTransfer()">Execute Movement</button>
+      <div class="modal-footer">
+        <button class="btn btn-default" onclick="closeModal('modalTransfer')">Cancel</button>
+        <button class="btn btn-primary" onclick="submitModalTransfer()">Execute Movement</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: STOCK ADJUSTMENT -->
-  <div id="modal-adjustment" class="modal-overlay">
-    <div class="modal-box">
-      <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">⚖️ Physical Stock Count Adjustment</h3>
-      <div class="form-group">
-        <label>Location to Audit</label>
-        <select id="adj-location">
-          <option value="4">WH2/Production Rack</option>
-          <option value="1">WH1/Main Store</option>
-        </select>
+  <!-- ================= MODAL: STOCK ADJUSTMENT ================= -->
+  <div class="modal-backdrop" id="modalAdjustment">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>⚖️ Physical Inventory Audit Reconciliation</h3>
+        <button class="btn btn-sm btn-default" onclick="closeModal('modalAdjustment')">✕</button>
       </div>
-      <div class="form-group">
-        <label>Product</label>
-        <select id="adj-product-select"></select>
+      <div class="modal-body">
+        <div class="form-grid-2">
+          <div class="form-item">
+            <label>Location Audited</label>
+            <select id="modalAdjLocation" class="form-control">
+              <option value="4">WH2/Production Rack</option>
+              <option value="1">WH1/Main Store</option>
+              <option value="2">WH1/Rack A</option>
+            </select>
+          </div>
+          <div class="form-item">
+            <label>Product</label>
+            <select id="modalAdjProduct" class="form-control"></select>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-item">
+            <label>Physical Counted Quantity</label>
+            <input type="number" id="modalAdjCounted" class="form-control" value="44" min="0">
+          </div>
+          <div class="form-item">
+            <label>Reason for Variance</label>
+            <select id="modalAdjReason" class="form-control">
+              <option value="Damaged in transit">Damaged in transit</option>
+              <option value="Lost / Missing">Lost / Missing</option>
+              <option value="Expired">Expired</option>
+              <option value="Cycle Count Variance">Cycle Count Variance</option>
+              <option value="Found Unrecorded Stock">Found Unrecorded Stock</option>
+            </select>
+          </div>
+        </div>
       </div>
-      <div class="form-group">
-        <label>Counted Physical Quantity</label>
-        <input type="number" id="adj-quantity" value="25" min="0">
+      <div class="modal-footer">
+        <button class="btn btn-default" onclick="closeModal('modalAdjustment')">Cancel</button>
+        <button class="btn btn-primary" onclick="submitModalAdjustment()">Post Ledger Adjustment</button>
       </div>
-      <div class="form-group">
-        <label>Reason / Write-Off Cause</label>
-        <input type="text" id="adj-reason" value="Cycle Count: Damaged in transit">
+    </div>
+  </div>
+
+  <!-- ================= MODAL: CREATE PRODUCT ================= -->
+  <div class="modal-backdrop" id="modalCreateProduct">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>📦 Create Master Product</h3>
+        <button class="btn btn-sm btn-default" onclick="closeModal('modalCreateProduct')">✕</button>
       </div>
-      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
-        <button class="btn btn-secondary" onclick="closeModal('modal-adjustment')">Cancel</button>
-        <button class="btn btn-primary" onclick="submitAdjustment()">Auto-Balance Ledger</button>
+      <div class="modal-body">
+        <div class="form-grid-2">
+          <div class="form-item">
+            <label>Product Name</label>
+            <input type="text" id="newProdName" class="form-control" placeholder="e.g. Laser Barcode Scanner">
+          </div>
+          <div class="form-item">
+            <label>SKU / Barcode Code</label>
+            <input type="text" id="newProdSKU" class="form-control" placeholder="e.g. SCN-LSR-01">
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-item">
+            <label>Category</label>
+            <select id="newProdCategory" class="form-control">
+              <option value="Electronics">Electronics</option>
+              <option value="Hardware">Hardware & Fasteners</option>
+              <option value="Raw Metals">Raw Metals</option>
+              <option value="Furniture">Furniture & Frames</option>
+            </select>
+          </div>
+          <div class="form-item">
+            <label>Unit of Measure</label>
+            <select id="newProdUOM" class="form-control">
+              <option value="units">units</option>
+              <option value="kg">kg</option>
+              <option value="boxes">boxes</option>
+              <option value="meters">meters</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-item">
+            <label>Unit Cost Price (₹)</label>
+            <input type="number" id="newProdCost" class="form-control" value="450" min="0">
+          </div>
+          <div class="form-item">
+            <label>Min Reorder Safety Level</label>
+            <input type="number" id="newProdMin" class="form-control" value="15" min="1">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-default" onclick="closeModal('modalCreateProduct')">Cancel</button>
+        <button class="btn btn-primary" onclick="submitCreateProduct()">Save Product</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: AUTH & OTP RESET ================= -->
+  <div class="modal-backdrop" id="modalAuth">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🔐 StockSense Identity & OTP Reset</h3>
+        <button class="btn btn-sm btn-default" onclick="closeModal('modalAuth')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom: 16px;">
+          <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 6px;">Active Demo Accounts:</label>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-sm btn-default" onclick="setDemoUser('Alex Vance', 'Inventory Manager')">👤 Alex Vance (Manager)</button>
+            <button class="btn btn-sm btn-default" onclick="setDemoUser('Jordan Cole', 'Warehouse Staff')">👷 Jordan Cole (Staff)</button>
+          </div>
+        </div>
+
+        <hr style="border: none; border-top: 1px solid var(--border-subtle); margin: 16px 0;">
+
+        <h4 style="font-size: 13.5px; font-weight: 700; margin-bottom: 8px;">6-Digit OTP Password Reset Simulation</h4>
+        <div class="form-item">
+          <label>Registered Email</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="email" id="otpEmailInput" class="form-control" value="manager@stocksense.com">
+            <button class="btn btn-default" onclick="requestOTP()">Send OTP</button>
+          </div>
+        </div>
+
+        <div id="otpInputSection" style="display: none; margin-top: 12px;">
+          <div class="form-grid-2">
+            <div class="form-item">
+              <label>Enter 6-Digit OTP</label>
+              <input type="text" id="otpCodeInput" class="form-control" placeholder="123456" maxlength="6">
+            </div>
+            <div class="form-item">
+              <label>New Secure Password</label>
+              <input type="password" id="otpNewPassword" class="form-control" placeholder="••••••••">
+            </div>
+          </div>
+          <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="verifyAndResetPassword()">Verify OTP & Reset Password</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-default" onclick="closeModal('modalAuth')">Close</button>
       </div>
     </div>
   </div>
 
   <!-- Scripts -->
-  <script src="/static/js/app.js"></script>
+  <script src="/static/js/enterprise.js"></script>
 </body>
 </html>
