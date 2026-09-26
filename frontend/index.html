@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StockSense — Enterprise Modular Inventory Management</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <!-- Navigation Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">📦</div>
+      <div>
+        <div class="brand-title">StockSense</div>
+        <div class="brand-subtitle">Double-Entry IMS</div>
+      </div>
+    </div>
+
+    <ul class="nav-links">
+      <li class="nav-item active" onclick="switchTab('dashboard')">
+        <span>📊</span> Dashboard View
+      </li>
+      <li class="nav-item" onclick="switchTab('products')">
+        <span>🏷️</span> Products & Stocks
+      </li>
+      <li class="nav-item" onclick="switchTab('operations')">
+        <span>⚡</span> Operations Flow
+      </li>
+      <li class="nav-item" onclick="switchTab('ledger')">
+        <span>📜</span> Stock Move Ledger
+      </li>
+      <li class="nav-item" onclick="switchTab('scanner')">
+        <span>📱</span> Warehouse Barcode UI
+      </li>
+      <li class="nav-item" onclick="switchTab('topology')">
+        <span>🏭</span> Warehouses & Racks
+      </li>
+    </ul>
+
+    <div class="sidebar-profile">
+      <div class="profile-info">
+        <span class="profile-name" id="user-display-name">Alex Vance</span>
+        <span class="profile-role" id="user-display-role">Inventory Manager</span>
+      </div>
+      <button class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px;" onclick="openAuthModal()">Switch</button>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main class="main-wrapper">
+
+    <!-- Top Action Bar -->
+    <header class="top-header">
+      <div>
+        <h1 class="page-title" id="page-title">Inventory Dashboard</h1>
+        <p class="page-desc" id="page-desc">Real-time double-entry stock transactions, ledger audit & floor alerts</p>
+      </div>
+      <div style="display: flex; gap: 12px;">
+        <button class="btn btn-secondary" onclick="openAdjustmentModal()">⚖️ Stock Adjustment</button>
+        <button class="btn btn-secondary" onclick="openTransferModal()">🔄 Internal Transfer</button>
+        <button class="btn btn-primary" onclick="openReceiptModal()">➕ New Receipt</button>
+      </div>
+    </header>
+
+    <!-- TAB 1: DASHBOARD -->
+    <section id="tab-dashboard" class="content-tab">
+      <!-- 5 Key Dashboard KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Total Products in Stock</span>
+            <span class="kpi-icon">📦</span>
+          </div>
+          <div class="kpi-value" id="kpi-total-units">0</div>
+          <div class="kpi-sub" id="kpi-sku-count">Across 0 distinct SKUs</div>
+        </div>
+
+        <div class="kpi-card" style="border-left: 4px solid var(--accent-danger);">
+          <div class="kpi-header">
+            <span class="kpi-title">Low / Out of Stock</span>
+            <span class="kpi-icon">⚠️</span>
+          </div>
+          <div class="kpi-value" id="kpi-low-stock" style="color: #f87171;">0</div>
+          <div class="kpi-sub"><span class="kpi-badge badge-danger">Needs Reorder</span></div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Pending Receipts</span>
+            <span class="kpi-icon">📥</span>
+          </div>
+          <div class="kpi-value" id="kpi-pending-receipts">0</div>
+          <div class="kpi-sub">Incoming from vendors</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Pending Deliveries</span>
+            <span class="kpi-icon">🚚</span>
+          </div>
+          <div class="kpi-value" id="kpi-pending-deliveries">0</div>
+          <div class="kpi-sub">Ready to pick & pack</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Internal Transfers</span>
+            <span class="kpi-icon">🔁</span>
+          </div>
+          <div class="kpi-value" id="kpi-internal-transfers">0</div>
+          <div class="kpi-sub">Scheduled rack movements</div>
+        </div>
+      </div>
+
+      <!-- Quick Floor Scanner Simulation Bar -->
+      <div class="scanner-card">
+        <div>
+          <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 4px;">⚡ Rapid Barcode / SKU Floor Inspector</h3>
+          <p style="font-size: 13px; color: var(--text-muted);">Scan or enter a product SKU to view instant location breakdown and available on-hand quantities</p>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <input type="text" id="quick-sku-input" class="text-input" placeholder="e.g. STL-100-KG or CHR-ERG-BLK" style="width: 250px;">
+          <button class="btn btn-primary" onclick="inspectSku()">Inspect</button>
+        </div>
+      </div>
+
+      <!-- Category Chart & Live Movements -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;">
+        <div class="table-container" style="padding: 20px;">
+          <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 16px;">📊 Stock Distribution by Category</h3>
+          <canvas id="categoryChart" height="200"></canvas>
+        </div>
+        <div class="table-container" style="padding: 20px;">
+          <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 16px;">📈 Operations Volume by Document Type</h3>
+          <canvas id="operationsChart" height="200"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: PRODUCTS -->
+    <section id="tab-products" class="content-tab" style="display: none;">
+      <!-- Dynamic Filter Bar -->
+      <div class="filter-bar">
+        <div class="filter-group">
+          <span class="filter-label">Search:</span>
+          <input type="text" id="prod-search-input" class="text-input" placeholder="Search by SKU or Name..." oninput="loadProducts()">
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Category:</span>
+          <select id="prod-category-filter" class="select-input" onchange="loadProducts()">
+            <option value="all">All Categories</option>
+            <option value="Raw Metals">Raw Metals</option>
+            <option value="Furniture & Frames">Furniture & Frames</option>
+            <option value="Hardware & Fasteners">Hardware & Fasteners</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="openProductModal()">➕ Create Product</button>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>SKU / Code</th>
+              <th>Product Name</th>
+              <th>Category</th>
+              <th>On Hand</th>
+              <th>Min Reorder</th>
+              <th>Target Stock</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="products-table-body">
+            <!-- Rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 3: OPERATIONS FLOW -->
+    <section id="tab-operations" class="content-tab" style="display: none;">
+      <div class="filter-bar">
+        <div class="filter-group">
+          <span class="filter-label">Document Type:</span>
+          <select id="op-type-filter" class="select-input" onchange="loadOperations()">
+            <option value="all">All Document Types</option>
+            <option value="receipt">Receipts (Incoming)</option>
+            <option value="delivery">Delivery Orders (Outgoing)</option>
+            <option value="internal">Internal Transfers</option>
+            <option value="adjustment">Stock Adjustments</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Status:</span>
+          <select id="op-status-filter" class="select-input" onchange="loadOperations()">
+            <option value="all">All Statuses</option>
+            <option value="ready">Ready</option>
+            <option value="done">Done</option>
+            <option value="draft">Draft</option>
+          </select>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-secondary" onclick="openDeliveryModal()">🚚 New Delivery</button>
+          <button class="btn btn-primary" onclick="openReceiptModal()">📥 New Receipt</button>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Doc Number</th>
+              <th>Type</th>
+              <th>Partner / Reason</th>
+              <th>Source Location</th>
+              <th>Destination Location</th>
+              <th>Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="operations-table-body">
+            <!-- Rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 4: STOCK MOVE LEDGER -->
+    <section id="tab-ledger" class="content-tab" style="display: none;">
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date & Time</th>
+              <th>Reference</th>
+              <th>Product SKU</th>
+              <th>Product Name</th>
+              <th>Quantity Moved</th>
+              <th>From (Source)</th>
+              <th>To (Destination)</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="ledger-table-body">
+            <!-- Rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 5: WAREHOUSE BARCODE UI -->
+    <section id="tab-scanner" class="content-tab" style="display: none;">
+      <div style="max-width: 600px; margin: 0 auto; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 32px; box-shadow: var(--shadow-card);">
+        <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">📱 Mobile Floor Barcode Scanner</h2>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px;">Simulate optical scanning by typing or selecting a barcode/SKU code.</p>
+        
+        <div class="form-group">
+          <label>Quick Select Preset SKU</label>
+          <select id="mobile-barcode-select" class="select-input" style="width: 100%;" onchange="document.getElementById('mobile-sku-val').value = this.value; runMobileScan();">
+            <option value="STL-100-KG">STL-100-KG (Structural Steel Rods)</option>
+            <option value="CHR-ERG-BLK">CHR-ERG-BLK (Ergonomic Warehouse Chairs)</option>
+            <option value="BLT-M8-100">BLT-M8-100 (M8 Industrial Bolts)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Or Type Custom Barcode</label>
+          <input type="text" id="mobile-sku-val" class="text-input" value="STL-100-KG">
+        </div>
+
+        <button class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 12px;" onclick="runMobileScan()">⚡ Trigger Floor Scan</button>
+
+        <div id="mobile-scan-result" style="margin-top: 24px; display: none; background: rgba(15, 23, 42, 0.9); border: 1px solid var(--border-glow); border-radius: var(--radius-md); padding: 18px;">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 6: WAREHOUSE TOPOLOGY -->
+    <section id="tab-topology" class="content-tab" style="display: none;">
+      <div id="topology-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: NEW RECEIPT -->
+  <div id="modal-receipt" class="modal-overlay">
+    <div class="modal-box">
+      <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">📥 New Incoming Goods Receipt</h3>
+      <div class="form-group">
+        <label>Vendor / Supplier Name</label>
+        <input type="text" id="rec-vendor-name" placeholder="e.g. ArcelorMittal Steel Ltd">
+      </div>
+      <div class="form-group">
+        <label>Destination Warehouse Location</label>
+        <select id="rec-dest-location">
+          <option value="1">WH1/Main Store</option>
+          <option value="2">WH1/Rack A</option>
+          <option value="3">WH1/Rack B</option>
+          <option value="4">WH2/Production Rack</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Product</label>
+        <select id="rec-product-select"></select>
+      </div>
+      <div class="form-group">
+        <label>Quantity Received</label>
+        <input type="number" id="rec-quantity" value="50" min="1">
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button class="btn btn-secondary" onclick="closeModal('modal-receipt')">Cancel</button>
+        <button class="btn btn-primary" onclick="submitReceipt()">Validate & Increment Stock</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: NEW DELIVERY -->
+  <div id="modal-delivery" class="modal-overlay">
+    <div class="modal-box">
+      <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">🚚 Customer Delivery Order</h3>
+      <div class="form-group">
+        <label>Customer Name</label>
+        <input type="text" id="del-customer-name" placeholder="e.g. Metro Frame Works Inc">
+      </div>
+      <div class="form-group">
+        <label>Source Warehouse Location</label>
+        <select id="del-source-location">
+          <option value="1">WH1/Main Store</option>
+          <option value="4">WH2/Production Rack</option>
+          <option value="2">WH1/Rack A</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Product</label>
+        <select id="del-product-select"></select>
+      </div>
+      <div class="form-group">
+        <label>Quantity to Deliver</label>
+        <input type="number" id="del-quantity" value="10" min="1">
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button class="btn btn-secondary" onclick="closeModal('modal-delivery')">Cancel</button>
+        <button class="btn btn-primary" onclick="submitDelivery()">Pick, Pack & Validate</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: INTERNAL TRANSFER -->
+  <div id="modal-transfer" class="modal-overlay">
+    <div class="modal-box">
+      <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">🔄 Internal Warehouse Transfer</h3>
+      <div class="form-group">
+        <label>Source Location</label>
+        <select id="trans-source-location">
+          <option value="1">WH1/Main Store</option>
+          <option value="4">WH2/Production Rack</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Destination Location</label>
+        <select id="trans-dest-location">
+          <option value="4">WH2/Production Rack</option>
+          <option value="1">WH1/Main Store</option>
+          <option value="2">WH1/Rack A</option>
+          <option value="3">WH1/Rack B</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Product</label>
+        <select id="trans-product-select"></select>
+      </div>
+      <div class="form-group">
+        <label>Transfer Quantity</label>
+        <input type="number" id="trans-quantity" value="15" min="1">
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button class="btn btn-secondary" onclick="closeModal('modal-transfer')">Cancel</button>
+        <button class="btn btn-primary" onclick="submitTransfer()">Execute Movement</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: STOCK ADJUSTMENT -->
+  <div id="modal-adjustment" class="modal-overlay">
+    <div class="modal-box">
+      <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">⚖️ Physical Stock Count Adjustment</h3>
+      <div class="form-group">
+        <label>Location to Audit</label>
+        <select id="adj-location">
+          <option value="4">WH2/Production Rack</option>
+          <option value="1">WH1/Main Store</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Product</label>
+        <select id="adj-product-select"></select>
+      </div>
+      <div class="form-group">
+        <label>Counted Physical Quantity</label>
+        <input type="number" id="adj-quantity" value="25" min="0">
+      </div>
+      <div class="form-group">
+        <label>Reason / Write-Off Cause</label>
+        <input type="text" id="adj-reason" value="Cycle Count: Damaged in transit">
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button class="btn btn-secondary" onclick="closeModal('modal-adjustment')">Cancel</button>
+        <button class="btn btn-primary" onclick="submitAdjustment()">Auto-Balance Ledger</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
