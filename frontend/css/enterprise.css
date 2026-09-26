@@ -981,3 +981,53 @@ body {
 @keyframes stroke { 100% { stroke-dashoffset: 0; } }
 @keyframes scale { 0%, 100% { transform: none; } 50% { transform: scale3d(1.1, 1.1, 1); } }
 @keyframes fill { 100% { box-shadow: inset 0px 0px 0px 30px transparent; } }
+
+/* Dark Mode Overrides */
+body.dark-theme {
+  --bg-app: #0f172a;
+  --bg-sidebar: #020617;
+  --bg-sidebar-hover: #1e293b;
+  --bg-surface: #1e293b;
+  --bg-surface-subtle: #334155;
+  --bg-surface-elevated: #1e293b;
+  
+  --border-subtle: #334155;
+  --border-strong: #475569;
+  
+  --text-main: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-light: #475569;
+  
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --primary-subtle: #1e3a8a;
+}
+
+body.dark-theme .card,
+body.dark-theme .app-header,
+body.dark-theme .modal-content,
+body.dark-theme .modal-footer {
+  background-color: var(--bg-surface);
+  border-color: var(--border-subtle);
+}
+
+body.dark-theme .erp-table th {
+  background-color: var(--bg-surface-subtle);
+  color: var(--text-secondary);
+}
+
+body.dark-theme .erp-table tr {
+  border-bottom-color: var(--border-subtle);
+}
+
+body.dark-theme .form-control {
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  border-color: var(--border-strong);
+}
+
+body.dark-theme .btn-outline {
+  border-color: var(--border-strong);
+  color: var(--text-secondary);
+}
