@@ -84,7 +84,7 @@ def create_receipt(req: CreateReceiptRequest, db: Session = Depends(get_db)):
     doc = OperationDocument(
         doc_number=doc_num,
         doc_type=DocType.RECEIPT,
-        status=DocStatus.READY,
+        status=DocStatus.DRAFT,
         partner_name=req.supplier_name,
         source_location_id=vendor_loc.id,
         dest_location_id=req.dest_location_id,
@@ -93,42 +93,11 @@ def create_receipt(req: CreateReceiptRequest, db: Session = Depends(get_db)):
     db.add(doc)
     db.flush()
 
-    for item in req.items:
-        create_stock_move(
-            db=db,
-            product_id=item.product_id,
-            source_location_id=vendor_loc.id,
-            dest_location_id=req.dest_location_id,
-            quantity=item.quantity,
-            document_id=doc.id,
-            reference=doc_num
-        )
-    
-    doc.status = DocStatus.DONE # Validated and stock incremented
-    db.commit()
-    return {"message": "Receipt validated and stock incremented", "doc_number": doc_num}
-
-@router.post("/deliveries")
-def create_delivery(req: CreateDeliveryRequest, db: Session = Depends(get_db)):
-    cust_loc = db.query(Location).filter(Location.full_path == "Customers/Outgoing").first()
-    if not cust_loc:
-        raise HTTPException(status_code=500, detail="Customer location not configured")
-
-    # Availability Check
-    for item in req.items:
-        available = get_product_location_stock(db, item.product_id, req.source_location_id)
-        if available < item.quantity:
-            prod = db.query(Product).filter(Product.id == item.product_id).first()
-            raise HTTPException(
-                status_code=400,
-                detail=f"Insufficient stock for {prod.name}. Available: {available}, Required: {item.quantity}"
-            )
-
     doc_num = f"DEL-{datetime.datetime.utcnow().strftime('%y%m%d')}-{random_suffix()}"
     doc = OperationDocument(
         doc_number=doc_num,
         doc_type=DocType.DELIVERY,
-        status=DocStatus.DONE,
+        status=DocStatus.DRAFT,
         partner_name=req.customer_name,
         source_location_id=req.source_location_id,
         dest_location_id=cust_loc.id,
@@ -137,35 +106,11 @@ def create_delivery(req: CreateDeliveryRequest, db: Session = Depends(get_db)):
     db.add(doc)
     db.flush()
 
-    for item in req.items:
-        create_stock_move(
-            db=db,
-            product_id=item.product_id,
-            source_location_id=req.source_location_id,
-            dest_location_id=cust_loc.id,
-            quantity=item.quantity,
-            document_id=doc.id,
-            reference=doc_num
-        )
-    db.commit()
-    return {"message": "Delivery validated and stock decremented", "doc_number": doc_num}
-
-@router.post("/transfers")
-def create_internal_transfer(req: CreateTransferRequest, db: Session = Depends(get_db)):
-    for item in req.items:
-        available = get_product_location_stock(db, item.product_id, req.source_location_id)
-        if available < item.quantity:
-            prod = db.query(Product).filter(Product.id == item.product_id).first()
-            raise HTTPException(
-                status_code=400,
-                detail=f"Cannot transfer {prod.name}. Available at source: {available}, Requested: {item.quantity}"
-            )
-
     doc_num = f"INT-{datetime.datetime.utcnow().strftime('%y%m%d')}-{random_suffix()}"
     doc = OperationDocument(
         doc_number=doc_num,
         doc_type=DocType.INTERNAL,
-        status=DocStatus.DONE,
+        status=DocStatus.DRAFT,
         partner_name="Internal Movement",
         source_location_id=req.source_location_id,
         dest_location_id=req.dest_location_id,
@@ -173,27 +118,6 @@ def create_internal_transfer(req: CreateTransferRequest, db: Session = Depends(g
     )
     db.add(doc)
     db.flush()
-
-    for item in req.items:
-        create_stock_move(
-            db=db,
-            product_id=item.product_id,
-            source_location_id=req.source_location_id,
-            dest_location_id=req.dest_location_id,
-            quantity=item.quantity,
-            document_id=doc.id,
-            reference=doc_num
-        )
-    db.commit()
-    return {"message": "Internal transfer completed successfully", "doc_number": doc_num}
-
-@router.post("/adjustments")
-def create_stock_adjustment(req: CreateAdjustmentRequest, db: Session = Depends(get_db)):
-    recorded = get_product_location_stock(db, req.product_id, req.location_id)
-    diff = req.counted_quantity - recorded
-
-    if diff == 0:
-        return {"message": "No adjustment required, counted stock matches recorded stock exactly."}
 
     doc_num = f"ADJ-{datetime.datetime.utcnow().strftime('%y%m%d')}-{random_suffix()}"
     loss_loc = db.query(Location).filter(Location.full_path == "Virtual/Loss & Scrap").first()
@@ -238,5 +162,62 @@ def create_stock_adjustment(req: CreateAdjustmentRequest, db: Session = Depends(
         "doc_number": doc_num
     }
 
+
+@router.post("/{doc_id}/mark_ready")
+def mark_ready(doc_id: int, db: Session = Depends(get_db)):
+    doc = db.query(OperationDocument).filter(OperationDocument.id == doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    if doc.status == DocStatus.DONE:
+        raise HTTPException(status_code=400, detail="Document is already done")
+        
+    new_status = DocStatus.READY
+    
+    # If it's a delivery or internal transfer, check stock
+    if doc.doc_type in (DocType.DELIVERY, DocType.INTERNAL):
+        for move in doc.moves:
+            available = get_product_location_stock(db, move.product_id, move.source_location_id)
+            if available < move.quantity:
+                new_status = DocStatus.WAITING
+                break
+                
+    doc.status = new_status
+    for move in doc.moves:
+        move.status = new_status
+        
+    db.commit()
+    return {"message": f"Document marked as {new_status}", "status": new_status}
+
+@router.post("/{doc_id}/validate")
+def validate_document(doc_id: int, db: Session = Depends(get_db)):
+    doc = db.query(OperationDocument).filter(OperationDocument.id == doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    if doc.status == DocStatus.WAITING:
+        raise HTTPException(status_code=400, detail="Cannot validate while waiting for stock")
+        
+    if doc.status == DocStatus.DONE:
+        raise HTTPException(status_code=400, detail="Already validated")
+        
+    # Re-verify stock right before validation just in case
+    if doc.doc_type in (DocType.DELIVERY, DocType.INTERNAL):
+        for move in doc.moves:
+            available = get_product_location_stock(db, move.product_id, move.source_location_id)
+            if available < move.quantity:
+                doc.status = DocStatus.WAITING
+                for m in doc.moves: m.status = DocStatus.WAITING
+                db.commit()
+                raise HTTPException(status_code=400, detail="Insufficient stock. Status reverted to WAITING.")
+
+    doc.status = DocStatus.DONE
+    for move in doc.moves:
+        move.status = DocStatus.DONE
+        
+    db.commit()
+    return {"message": "Document validated successfully", "status": DocStatus.DONE}
+
 def random_suffix():
+
     return uuid.uuid4().hex[:4].upper()

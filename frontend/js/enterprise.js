@@ -376,13 +376,23 @@ function renderLedgerTable() {
 
   tbody.innerHTML = "";
   state.ledger.forEach(m => {
+    const isIncoming = m.to_location.includes("WH");
+    const isOutgoing = m.from_location.includes("WH");
+    
+    let qtyHtml = `<strong style="color: var(--text-base);">${m.quantity} ${m.uom}</strong>`;
+    if (isIncoming && !isOutgoing) {
+       qtyHtml = `<strong style="color: #16a34a;">+${m.quantity} ${m.uom}</strong>`;
+    } else if (isOutgoing && !isIncoming) {
+       qtyHtml = `<strong style="color: #dc2626;">-${m.quantity} ${m.uom}</strong>`;
+    }
+
     const tr = document.createElement("tr");
     tr.className = "clickable";
     tr.onclick = () => openMoveDrawer(m);
     tr.innerHTML = `
       <td><code style="font-weight: 700; color: #2563eb;">${m.reference || `MOV-${m.id}`}</code></td>
       <td><strong>${m.product_name}</strong> <span style="font-size: 11px; color: var(--text-muted);">(${m.sku})</span></td>
-      <td><strong style="color: #16a34a;">${m.quantity} ${m.uom}</strong></td>
+      <td>${qtyHtml}</td>
       <td><code style="color: #475569;">${m.from_location}</code></td>
       <td><code style="color: #16a34a; font-weight: 600;">${m.to_location}</code></td>
       <td><span class="badge badge-default">Double-Entry</span></td>
@@ -893,4 +903,70 @@ function exportLedgerCSV() {
   a.setAttribute('href', url);
   a.setAttribute('download', `StockSense_Ledger_${new Date().toISOString().slice(0,10)}.csv`);
   a.click();
+}
+
+// -- NEW STATE MACHINE ACTIONS --
+async function markDocReady(id) {
+  try {
+    const res = await fetch(`/api/operations/${id}/mark_ready`, { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) alert("Error: " + (data.detail || "Failed to mark ready"));
+    else {
+      showToast("Operation updated: " + data.status, "success");
+      await fetchOperations(); // Refresh lists
+      await loadDashboardKPIs();
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function validateDoc(id) {
+  try {
+    const res = await fetch(`/api/operations/${id}/validate`, { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) alert("Validation Error: " + (data.detail || "Insufficient stock or error"));
+    else {
+      showToast("Validated Successfully! Stock moved.", "success");
+      await loadAllData(); // Refresh everything since stock changed
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function printReceipt(id) {
+    const doc = state.operations.find(o => o.id === id);
+    if (!doc) return;
+    
+    // Fill the animated receipt DOM
+    document.getElementById("receipt-number").innerText = doc.doc_number;
+    document.getElementById("receipt-partner").innerText = doc.partner_name;
+    document.getElementById("receipt-date").innerText = new Date().toLocaleString();
+    
+    const tbody = document.getElementById("receipt-items-body");
+    tbody.innerHTML = "";
+    
+    doc.items.forEach(item => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${item.product_name} <br><small>${item.sku}</small></td>
+            <td style="text-align: right; font-weight: bold;">${item.quantity} ${item.uom}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+    
+    // Show overlay
+    const overlay = document.getElementById("receipt-overlay");
+    overlay.style.display = "flex";
+    
+    // Trigger animations
+    const paper = document.getElementById("receipt-paper");
+    paper.classList.remove("print-animate");
+    void paper.offsetWidth; // trigger reflow
+    paper.classList.add("print-animate");
+}
+
+function closeReceipt() {
+    document.getElementById("receipt-overlay").style.display = "none";
 }

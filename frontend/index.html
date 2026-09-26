@@ -1121,6 +1121,68 @@
   </div>
 
   <!-- Scripts -->
+<!-- ANIMATED RECEIPT MODAL -->
+
+<div id="receipt-overlay" class="receipt-overlay" style="display: none;">
+
+  <div class="receipt-container">
+
+    <div class="printer-slot"></div>
+
+    <div id="receipt-paper" class="receipt-paper">
+
+      <div class="receipt-header">
+
+        <h2>StockSense</h2>
+
+        <p>Official Operation Receipt</p>
+
+      </div>
+
+      <div class="receipt-meta">
+
+        <div><strong>Document:</strong> <span id="receipt-number"></span></div>
+
+        <div><strong>Partner:</strong> <span id="receipt-partner"></span></div>
+
+        <div><strong>Date:</strong> <span id="receipt-date"></span></div>
+
+      </div>
+
+      <table class="receipt-table">
+
+        <thead><tr><th>Item</th><th style="text-align:right;">Qty</th></tr></thead>
+
+        <tbody id="receipt-items-body"></tbody>
+
+      </table>
+
+      <div class="barcode-container">
+
+        <div class="fake-barcode">||| ||||| || ||| |||| ||</div>
+
+        <div class="check-animation">
+
+           <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+
+             <circle class="checkmark__circle" cx="26" cy="26" r="25" fill="none"/>
+
+             <path class="checkmark__check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+
+           </svg>
+
+        </div>
+
+      </div>
+
+      <button class="btn btn-primary" onclick="closeReceipt()" style="width: 100%; margin-top: 20px;">Close / Print Physical</button>
+
+    </div>
+
+  </div>
+
+</div>
+
   <script src="/static/js/enterprise.js"></script>
 </body>
 </html>
