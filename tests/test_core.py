@@ -8,9 +8,7 @@ from main import app
 from app.database import Base, get_db
 from app.models import Product, Location, Warehouse, User, UserRole, ProductCategory
 from app.services.seeder import seed_database
-from passlib.context import CryptContext
-
-pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+from app.routers.auth import hash_password
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 engine = create_engine(
@@ -36,10 +34,6 @@ def setup_db():
     db = TestingSessionLocal()
     seed_database(db)
     
-    # Manually seed a user for auth test
-    user = User(email="manager@stocksense.com", password=pwd_context.hash("admin"), full_name="Admin", role="inventory_manager")
-    db.add(user)
-    
     # Manually seed a product for operation test
     cat = ProductCategory(name="Test Category")
     db.add(cat)
@@ -64,6 +58,49 @@ def test_auth_login():
     data = response.json()
     assert "token" in data
     assert data["user"]["role"] == "inventory_manager"
+
+def test_auth_register_and_reset_flow():
+    # 1. Register new user
+    reg_res = client.post("/api/auth/register", json={
+        "full_name": "Test User",
+        "email": "testuser@stocksense.com",
+        "password": "initialpassword",
+        "role": "warehouse_staff"
+    })
+    assert reg_res.status_code == 200
+    reg_data = reg_res.json()
+    assert "user" in reg_data
+    assert reg_data["user"]["email"] == "testuser@stocksense.com"
+    
+    # 2. Login with registered user
+    login_res = client.post("/api/auth/login", json={
+        "email": "testuser@stocksense.com",
+        "password": "initialpassword"
+    })
+    assert login_res.status_code == 200
+    assert "token" in login_res.json()
+    
+    # 3. Request OTP code
+    otp_res = client.post("/api/auth/request-otp", json={"email": "testuser@stocksense.com"})
+    assert otp_res.status_code == 200
+    otp_preview = otp_res.json()["otp_preview"]
+    assert len(otp_preview) == 6
+    
+    # 4. Reset password
+    reset_res = client.post("/api/auth/reset-password", json={
+        "email": "testuser@stocksense.com",
+        "otp": otp_preview,
+        "new_password": "newpassword123"
+    })
+    assert reset_res.status_code == 200
+    assert "message" in reset_res.json()
+    
+    # 5. Login with new password
+    new_login_res = client.post("/api/auth/login", json={
+        "email": "testuser@stocksense.com",
+        "password": "newpassword123"
+    })
+    assert new_login_res.status_code == 200
 
 def test_document_state_machine():
     db = TestingSessionLocal()
@@ -111,4 +148,26 @@ def test_insufficient_stock_delivery_wait_state():
     res_ready = client.post(f"/api/operations/{doc_id}/mark_ready")
     assert res_ready.status_code == 200
     assert res_ready.json()["status"] == "waiting"
+
+
+def test_alerts_and_auto_reorder():
+    db = TestingSessionLocal()
+    cat = db.query(ProductCategory).first()
+    low_prod = Product(sku="ALERT-01", name="Low Stock Item", category_id=cat.id, min_reorder_qty=20.0, target_stock_qty=100.0, cost_price=50.0)
+    db.add(low_prod)
+    db.commit()
+    db.refresh(low_prod)
+
+    res = client.get("/api/alerts/reorder-suggestions")
+    assert res.status_code == 200
+    suggestions = res.json()
+    assert isinstance(suggestions, list)
+    assert any(s["sku"] == "ALERT-01" for s in suggestions)
+    
+    # Auto reorder for the low stock product
+    reorder_res = client.post("/api/alerts/auto-reorder", json={"product_id": low_prod.id})
+    assert reorder_res.status_code == 200
+    data = reorder_res.json()
+    assert "doc_number" in data or "message" in data
+    assert data["reorder_quantity"] == 100.0
 

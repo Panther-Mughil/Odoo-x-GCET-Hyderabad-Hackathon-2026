@@ -71,7 +71,7 @@ def create_stock_move(
     quantity: float,
     document_id: int = None,
     reference: str = None,
-    status: str = DocStatus.DONE,
+    status: str = DocStatus.DONE
 ) -> StockMove:
     """Execute an atomic double-entry stock ledger transaction."""
     move = StockMove(
@@ -81,7 +81,8 @@ def create_stock_move(
         quantity=quantity,
         document_id=document_id,
         reference=reference,
-        status=status,
+        status=status
     )
     db.add(move)
     return move
+

@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from app.database import engine, Base, SessionLocal
-from app.routers import auth, products, operations, dashboard
+from app.routers import auth, products, operations, dashboard, alerts
 from app.services.seeder import seed_database
 
 # Create tables
@@ -36,6 +36,7 @@ app.include_router(auth.router)
 app.include_router(products.router)
 app.include_router(operations.router)
 app.include_router(dashboard.router)
+app.include_router(alerts.router)
 
 # Mount Frontend static files
 frontend_dir = os.path.join(os.path.dirname(__file__), "frontend")
