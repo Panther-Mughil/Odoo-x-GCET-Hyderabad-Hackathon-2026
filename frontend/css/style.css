@@ -4,7 +4,7 @@
    ========================================================================== */
 
 :root {
-  /* Color Palette - Clean SaaS */
+  /* Color Palette - Clean SaaS (Light Mode) */
   --bg-body: #f8fafc;
   --bg-card: #ffffff;
   --bg-subtle: #f1f5f9;
@@ -59,6 +59,57 @@
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --transition-fast: 0.15s ease;
   --transition-normal: 0.2s ease;
+}
+
+/* ==========================================================================
+   Dark Theme Design Tokens
+   ========================================================================== */
+html[data-theme="dark"], 
+body[data-theme="dark"],
+[data-theme="dark"] {
+  /* Color Palette - Modern Deep Slate */
+  --bg-body: #0b0f19;
+  --bg-card: #131b2e;
+  --bg-subtle: #1e293b;
+  --bg-hover: #243248;
+
+  --border-color: #243248;
+  --border-light: #1e293b;
+  --border-focus: #60a5fa;
+
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-white: #ffffff;
+
+  /* Brand Primary in Dark Mode */
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --primary-light: rgba(59, 130, 246, 0.15);
+  --primary-border: rgba(59, 130, 246, 0.35);
+
+  /* Status Colors in Dark Mode */
+  --success: #22c55e;
+  --success-light: rgba(34, 197, 94, 0.15);
+  --success-border: rgba(34, 197, 94, 0.35);
+
+  --warning: #f59e0b;
+  --warning-light: rgba(245, 158, 11, 0.15);
+  --warning-border: rgba(245, 158, 11, 0.35);
+
+  --danger: #ef4444;
+  --danger-light: rgba(239, 68, 68, 0.15);
+  --danger-border: rgba(239, 68, 68, 0.35);
+
+  --info: #38bdf8;
+  --info-light: rgba(56, 189, 248, 0.15);
+  --info-border: rgba(56, 189, 248, 0.35);
+
+  /* Shadows for Dark Mode */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.5), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
 }
 
 /* Reset & Box Sizing */
@@ -155,7 +206,7 @@ a:hover {
 /* Sidebar */
 .app-sidebar {
   width: var(--sidebar-width);
-  background: #ffffff;
+  background: var(--bg-card);
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
@@ -286,7 +337,7 @@ a:hover {
 .sidebar-footer {
   padding: 14px;
   border-top: 1px solid var(--border-color);
-  background: #ffffff;
+  background: var(--bg-card);
 }
 
 .user-profile {
@@ -373,7 +424,7 @@ a:hover {
 /* Top Header */
 .app-header {
   height: var(--header-height);
-  background: #ffffff;
+  background: var(--bg-card);
   border-bottom: 1px solid var(--border-color);
   padding: 0 28px;
   display: flex;
@@ -431,7 +482,7 @@ a:hover {
 
 .search-input:focus {
   outline: none;
-  background: #ffffff;
+  background: var(--bg-card);
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
@@ -461,7 +512,7 @@ a:hover {
 .warehouse-select {
   height: 36px;
   padding: 0 10px;
-  background: #ffffff;
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   font-size: 0.85rem;
@@ -472,9 +523,44 @@ a:hover {
   transition: border-color var(--transition-fast);
 }
 
+.warehouse-select option {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
 .warehouse-select:focus {
   outline: none;
   border-color: var(--primary);
+}
+
+/* Theme Toggle Button */
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 0 10px;
+  height: 36px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.theme-toggle-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-focus);
+}
+
+.theme-toggle-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.theme-toggle-btn:hover svg {
+  transform: rotate(20deg);
 }
 
 /* ==========================================================================
@@ -514,17 +600,17 @@ a:hover {
 }
 
 .btn-secondary {
-  background: #ffffff;
+  background: var(--bg-card);
   color: var(--text-primary);
   border-color: var(--border-color);
 }
 .btn-secondary:hover {
-  background: var(--bg-subtle);
-  border-color: #cbd5e1;
+  background: var(--bg-hover);
+  border-color: var(--border-focus);
 }
 
 .btn-outline-primary {
-  background: #ffffff;
+  background: transparent;
   color: var(--primary);
   border-color: var(--primary-border);
 }
@@ -557,13 +643,13 @@ a:hover {
 }
 
 .btn-scan {
-  background: #ffffff;
+  background: var(--bg-card);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
   font-weight: 600;
 }
 .btn-scan:hover {
-  background: var(--bg-subtle);
+  background: var(--bg-hover);
   border-color: var(--primary);
   color: var(--primary);
 }
@@ -661,7 +747,7 @@ a:hover {
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   box-shadow: var(--shadow-xs);
-  transition: box-shadow var(--transition-fast);
+  transition: box-shadow var(--transition-fast), background var(--transition-fast);
 }
 
 .card-header {
@@ -703,7 +789,7 @@ a:hover {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
 }
 
 .kpi-card:hover {
@@ -803,6 +889,14 @@ a:hover {
   margin-top: 2px;
 }
 
+[data-theme="dark"] .stock-alert-content h4 {
+  color: #fde047;
+}
+
+[data-theme="dark"] .stock-alert-content p {
+  color: #fef08a;
+}
+
 /* Dashboard Two-Column Mid Grid */
 .dashboard-grid-2col {
   display: grid;
@@ -833,7 +927,7 @@ a:hover {
 }
 
 .timeframe-btn.active {
-  background: #ffffff;
+  background: var(--bg-card);
   color: var(--primary);
   font-weight: 600;
   box-shadow: var(--shadow-xs);
@@ -934,7 +1028,7 @@ a:hover {
 }
 
 .table tbody tr:hover {
-  background-color: #fafbfc;
+  background-color: var(--bg-hover);
 }
 
 .table tr:last-child td {
@@ -961,7 +1055,7 @@ a:hover {
 /* Table Card Footer Link */
 .card-footer-link {
   padding: 12px 20px;
-  background: #fafbfc;
+  background: var(--bg-subtle);
   border-top: 1px solid var(--border-color);
   display: flex;
   align-items: center;
@@ -1010,7 +1104,7 @@ a:hover {
 }
 
 .filter-tab.active {
-  background: #ffffff;
+  background: var(--bg-card);
   color: var(--primary);
   font-weight: 600;
   box-shadow: var(--shadow-xs);
@@ -1053,13 +1147,18 @@ a:hover {
   width: 100%;
   height: 38px;
   padding: 0 12px;
-  background: #ffffff;
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   font-size: 0.875rem;
   color: var(--text-primary);
   font-family: inherit;
   transition: all var(--transition-fast);
+}
+
+.form-control option {
+  background: var(--bg-card);
+  color: var(--text-primary);
 }
 
 .form-control:focus {
@@ -1100,6 +1199,58 @@ a:hover {
   align-items: center;
   gap: 10px;
   animation: fadeIn 0.2s ease-in-out;
+}
+
+[data-theme="dark"] .alert-success-box {
+  color: #86efac;
+}
+
+/* ==========================================================================
+   Theme Option Selector in Settings Page
+   ========================================================================== */
+
+.theme-options-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.theme-option-card {
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 14px 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+}
+
+.theme-option-card:hover {
+  border-color: var(--primary-border);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.theme-option-card.active {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.theme-option-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.theme-option-label {
+  font-size: 0.85rem;
 }
 
 /* ==========================================================================
@@ -1143,7 +1294,7 @@ a:hover {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.45);
+  background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(2px);
   z-index: 200;
   display: flex;
@@ -1161,7 +1312,7 @@ a:hover {
 }
 
 .modal {
-  background: #ffffff;
+  background: var(--bg-card);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-lg);
@@ -1211,7 +1362,7 @@ a:hover {
 .modal-footer {
   padding: 14px 20px;
   border-top: 1px solid var(--border-color);
-  background: #fafbfc;
+  background: var(--bg-subtle);
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -1276,7 +1427,7 @@ a:hover {
 }
 
 .barcode-chip {
-  background: #ffffff;
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   padding: 4px 9px;
   border-radius: 4px;
@@ -1369,7 +1520,7 @@ a:hover {
 }
 
 .toast {
-  background: #ffffff;
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-left: 4px solid var(--primary);
   padding: 12px 16px;
@@ -1412,7 +1563,7 @@ a:hover {
   left: 0;
   right: 0;
   height: 60px;
-  background: #ffffff;
+  background: var(--bg-card);
   border-top: 1px solid var(--border-color);
   z-index: 150;
   justify-content: space-around;

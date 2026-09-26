@@ -16,6 +16,20 @@
 
   <!-- Clean SaaS Stylesheet -->
   <link rel="stylesheet" href="/static/css/style.css">
+
+  <!-- Immediate Theme Initialization to Prevent Flash -->
+  <script>
+    (function() {
+      try {
+        var saved = localStorage.getItem('stocksense_theme') || 'system';
+        var theme = saved;
+        if (saved === 'system') {
+          theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
 
@@ -157,6 +171,14 @@
           <div class="tagline-badge">
             <span>"Know your stock. Move it smarter."</span>
           </div>
+
+          <!-- Dark / Light Theme Toggle Button -->
+          <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Dark / Light Mode" aria-label="Toggle Theme">
+            <span id="themeToggleIcon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            </span>
+            <span id="themeToggleLabel">Theme</span>
+          </button>
 
           <!-- Barcode Scanner Quick Button -->
           <button class="btn btn-scan" onclick="openBarcodeScannerModal()" title="Open Barcode Scanner">
@@ -644,7 +666,35 @@
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+          <!-- Card 1: Appearance & Theme -->
+          <div class="card">
+            <div class="card-header">
+              <h3>Appearance & Theme</h3>
+            </div>
+            <div class="card-body">
+              <label class="form-label">Theme Mode</label>
+              <p class="text-xs text-muted" style="margin-bottom: 12px;">
+                Choose your visual interface appearance or sync with system preferences.
+              </p>
+              <div class="theme-options-grid">
+                <div class="theme-option-card" id="themeOptLight" onclick="setThemeMode('light')">
+                  <span class="theme-option-icon">☀️</span>
+                  <span class="theme-option-label">Light</span>
+                </div>
+                <div class="theme-option-card" id="themeOptDark" onclick="setThemeMode('dark')">
+                  <span class="theme-option-icon">🌙</span>
+                  <span class="theme-option-label">Dark</span>
+                </div>
+                <div class="theme-option-card" id="themeOptSystem" onclick="setThemeMode('system')">
+                  <span class="theme-option-icon">💻</span>
+                  <span class="theme-option-label">System</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: General Configuration -->
           <div class="card">
             <div class="card-header">
               <h3>General Configuration</h3>
@@ -665,6 +715,7 @@
             </div>
           </div>
 
+          <!-- Card 3: Demo & System Controls -->
           <div class="card">
             <div class="card-header">
               <h3>Demo & System Controls</h3>

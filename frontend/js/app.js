@@ -638,6 +638,8 @@ function renderStockMovementChart(timeframe) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
   // Chart datasets based on timeframe
   let labels = [];
   let incoming = [];
@@ -670,7 +672,7 @@ function renderStockMovementChart(timeframe) {
           {
             label: 'Incoming',
             data: incoming,
-            backgroundColor: '#2563eb', // Blue Primary
+            backgroundColor: isDark ? '#3b82f6' : '#2563eb', // Blue Primary
             borderRadius: 4,
             barPercentage: 0.6,
             categoryPercentage: 0.7
@@ -678,7 +680,7 @@ function renderStockMovementChart(timeframe) {
           {
             label: 'Outgoing',
             data: outgoing,
-            backgroundColor: '#94a3b8', // Clean slate gray
+            backgroundColor: isDark ? '#475569' : '#94a3b8', // Slate gray
             borderRadius: 4,
             barPercentage: 0.6,
             categoryPercentage: 0.7
@@ -695,11 +697,13 @@ function renderStockMovementChart(timeframe) {
             labels: {
               boxWidth: 12,
               font: { family: 'Inter', size: 12, weight: '500' },
-              color: '#475569'
+              color: isDark ? '#94a3b8' : '#475569'
             }
           },
           tooltip: {
-            backgroundColor: '#0f172a',
+            backgroundColor: isDark ? '#1e293b' : '#0f172a',
+            borderColor: isDark ? '#334155' : 'transparent',
+            borderWidth: isDark ? 1 : 0,
             padding: 10,
             cornerRadius: 6,
             titleFont: { family: 'Inter', size: 12, weight: '600' },
@@ -709,11 +713,11 @@ function renderStockMovementChart(timeframe) {
         scales: {
           x: {
             grid: { display: false },
-            ticks: { font: { family: 'Inter', size: 11 }, color: '#64748b' }
+            ticks: { font: { family: 'Inter', size: 11 }, color: isDark ? '#94a3b8' : '#64748b' }
           },
           y: {
-            grid: { color: '#f1f5f9' },
-            ticks: { font: { family: 'Inter', size: 11 }, color: '#64748b' },
+            grid: { color: isDark ? '#1e293b' : '#f1f5f9' },
+            ticks: { font: { family: 'Inter', size: 11 }, color: isDark ? '#94a3b8' : '#64748b' },
             border: { dash: [4, 4] }
           }
         }
@@ -1641,8 +1645,114 @@ function scannerAction(action) {
 // 12. Settings Page & Demo Reset
 // ==========================================================================
 
+// ==========================================================================
+// 12. Theme Management (Light, Dark & System Modes)
+// ==========================================================================
+
+const ThemeManager = {
+  STORAGE_KEY: 'stocksense_theme',
+
+  init() {
+    const saved = localStorage.getItem(this.STORAGE_KEY) || 'system';
+    this.apply(saved, false);
+
+    // Dynamic listener for OS/System theme changes when in 'system' mode
+    if (window.matchMedia) {
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+        const currentPref = localStorage.getItem(this.STORAGE_KEY) || 'system';
+        if (currentPref === 'system') {
+          this.apply('system', false);
+        }
+      });
+    }
+  },
+
+  getEffectiveTheme(pref) {
+    if (pref === 'dark') return 'dark';
+    if (pref === 'light') return 'light';
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      return 'dark';
+    }
+    return 'light';
+  },
+
+  apply(pref, showNotification = true) {
+    const effective = this.getEffectiveTheme(pref);
+    document.documentElement.setAttribute('data-theme', effective);
+    document.body.setAttribute('data-theme', effective);
+
+    // Update Header Button UI
+    const toggleIcon = document.getElementById('themeToggleIcon');
+    const toggleLabel = document.getElementById('themeToggleLabel');
+
+    if (toggleIcon && toggleLabel) {
+      if (effective === 'dark') {
+        toggleIcon.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
+        toggleLabel.textContent = 'Light';
+      } else {
+        toggleIcon.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+        toggleLabel.textContent = 'Dark';
+      }
+    }
+
+    // Synchronize Settings Page Theme Cards
+    const optLight = document.getElementById('themeOptLight');
+    const optDark = document.getElementById('themeOptDark');
+    const optSystem = document.getElementById('themeOptSystem');
+
+    if (optLight && optDark && optSystem) {
+      optLight.classList.toggle('active', pref === 'light');
+      optDark.classList.toggle('active', pref === 'dark');
+      optSystem.classList.toggle('active', pref === 'system');
+    }
+
+    // Refresh stock chart colors if on dashboard
+    if (activePage === 'dashboard' && store.chartInstance) {
+      renderStockMovementChart(store.activeTimeframe);
+    }
+
+    if (showNotification) {
+      const label = pref === 'system' ? `System Sync (${effective.toUpperCase()})` : (pref === 'dark' ? 'Dark Mode' : 'Light Mode');
+      showToast(`Visual appearance updated to ${label}`, 'info');
+    }
+  },
+
+  setTheme(mode) {
+    localStorage.setItem(this.STORAGE_KEY, mode);
+    this.apply(mode, true);
+  },
+
+  toggle() {
+    const current = localStorage.getItem(this.STORAGE_KEY) || 'system';
+    const effective = this.getEffectiveTheme(current);
+    const next = effective === 'dark' ? 'light' : 'dark';
+    this.setTheme(next);
+  }
+};
+
+function toggleTheme() {
+  ThemeManager.toggle();
+}
+
+function setThemeMode(mode) {
+  ThemeManager.setTheme(mode);
+}
+
+// ==========================================================================
+// 13. Settings Page & Demo Reset
+// ==========================================================================
+
 function renderSettingsPage() {
-  // Can display environment info and reset option
+  const saved = localStorage.getItem(ThemeManager.STORAGE_KEY) || 'system';
+  const optLight = document.getElementById('themeOptLight');
+  const optDark = document.getElementById('themeOptDark');
+  const optSystem = document.getElementById('themeOptSystem');
+
+  if (optLight && optDark && optSystem) {
+    optLight.classList.toggle('active', saved === 'light');
+    optDark.classList.toggle('active', saved === 'dark');
+    optSystem.classList.toggle('active', saved === 'system');
+  }
 }
 
 function resetDemoData() {
@@ -1654,7 +1764,7 @@ function resetDemoData() {
 }
 
 // ==========================================================================
-// 13. Modal & Toast Infrastructure
+// 14. Modal & Toast Infrastructure
 // ==========================================================================
 
 function openModal(modalId) {
@@ -1723,10 +1833,13 @@ function handleGlobalSearch(query) {
 }
 
 // ==========================================================================
-// 14. Initialization on DOM Load
+// 15. Initialization on DOM Load
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Initialize Theme System
+  ThemeManager.init();
+
   // Check hash on load
   const hash = window.location.hash.replace('#', '');
   if (['dashboard', 'products', 'receipts', 'deliveries', 'transfers', 'stock', 'history', 'settings'].includes(hash)) {
