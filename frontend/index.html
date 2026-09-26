@@ -736,30 +736,76 @@
   </div>
 
   <!-- ========================================================================
-       MODAL 0: AUTHENTICATION (LOGIN / REGISTER / RESET PASSWORD)
+       MODAL 0: AUTHENTICATION (REGISTER FIRST / LOGIN / RESET PASSWORD)
        ======================================================================== -->
   <div class="modal-backdrop" id="authModal">
-    <div class="modal" style="max-width: 440px;">
+    <div class="modal" style="max-width: 450px;">
       <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
         <div>
-          <h3 id="authModalTitle" style="font-size: 1.25rem;">Sign In to StockSense</h3>
-          <p class="text-xs text-muted" id="authModalSubtitle">Access real-time inventory operations</p>
+          <h3 id="authModalTitle" style="font-size: 1.25rem;">Create StockSense Account</h3>
+          <p class="text-xs text-muted" id="authModalSubtitle">Register first to access your inventory dashboard</p>
         </div>
-        <button class="modal-close" onclick="closeModal('authModal')" aria-label="Close">
+        <button class="modal-close" id="authModalCloseBtn" onclick="closeAuthModal()" aria-label="Close" style="display: none;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </div>
 
       <div class="modal-body" style="padding-top: 14px;">
-        <!-- Auth Tab Buttons -->
+        <!-- Auth Tab Buttons (Register First) -->
         <div class="filter-tabs" style="margin-bottom: 18px; width: 100%; display: flex;">
-          <button type="button" class="filter-tab active" id="tabAuthLogin" onclick="switchAuthTab('login')" style="flex: 1; text-align: center;">Sign In</button>
-          <button type="button" class="filter-tab" id="tabAuthRegister" onclick="switchAuthTab('register')" style="flex: 1; text-align: center;">Register</button>
+          <button type="button" class="filter-tab active" id="tabAuthRegister" onclick="switchAuthTab('register')" style="flex: 1; text-align: center;">Register</button>
+          <button type="button" class="filter-tab" id="tabAuthLogin" onclick="switchAuthTab('login')" style="flex: 1; text-align: center;">Sign In</button>
           <button type="button" class="filter-tab" id="tabAuthReset" onclick="switchAuthTab('reset')" style="flex: 1; text-align: center;">Reset OTP</button>
         </div>
 
-        <!-- FORM 1: LOGIN -->
-        <form id="loginForm" onsubmit="handleLoginSubmit(event)">
+        <!-- FORM 1: REGISTER (SHOWN FIRST BY DEFAULT) -->
+        <form id="registerForm" onsubmit="handleRegisterSubmit(event)">
+          <div class="form-group">
+            <label class="form-label" for="registerFullName">Full Name</label>
+            <input type="text" class="form-control" id="registerFullName" placeholder="e.g. Rajesh Sharma" required autocomplete="name">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="registerEmail">Email Address</label>
+            <input type="email" class="form-control" id="registerEmail" placeholder="e.g. rajesh@stocksense.com" required autocomplete="email">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="registerRole">Assigned Role</label>
+            <select class="form-control" id="registerRole">
+              <option value="inventory_manager">👑 Inventory Manager (Full Operations)</option>
+              <option value="warehouse_staff">📦 Warehouse Staff (Floor & Scans)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="registerPassword">Password</label>
+            <div style="position: relative;">
+              <input type="password" class="form-control" id="registerPassword" placeholder="Create a secure password" required minlength="4" autocomplete="new-password">
+              <button type="button" onclick="togglePasswordVisibility('registerPassword', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 0.85rem;" title="Show/Hide Password">👁</button>
+            </div>
+          </div>
+
+          <!-- Quick Test Auto-Fill for Hackathon Evaluation -->
+          <div style="margin-bottom: 16px;">
+            <span class="text-xs text-muted font-medium">Quick Demo Register / Fill:</span>
+            <div style="display: flex; gap: 6px; margin-top: 6px;">
+              <span class="barcode-chip" onclick="quickFillRegister('Rajesh Sharma', 'manager@stocksense.com', 'admin', 'inventory_manager')" title="Fill Manager Profile">👑 Fill Manager</span>
+              <span class="barcode-chip" onclick="quickFillRegister('Vikram Singh', 'staff@stocksense.com', 'admin', 'warehouse_staff')" title="Fill Staff Profile">📦 Fill Staff</span>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="btnRegisterSubmit" style="width: 100%; height: 42px; font-weight: 600;">
+            Create Account & Enter Dashboard
+          </button>
+
+          <p class="text-xs text-muted" style="text-align: center; margin-top: 14px;">
+            Already have an account? <a href="javascript:void(0)" onclick="switchAuthTab('login')" style="color: var(--primary); font-weight: 600;">Sign in here</a>
+          </p>
+        </form>
+
+        <!-- FORM 2: LOGIN -->
+        <form id="loginForm" onsubmit="handleLoginSubmit(event)" style="display: none;">
           <div class="form-group">
             <label class="form-label" for="loginEmail">Email Address</label>
             <input type="email" class="form-control" id="loginEmail" placeholder="manager@stocksense.com" required autocomplete="email">
@@ -785,49 +831,12 @@
             </div>
           </div>
 
-          <button type="submit" class="btn btn-primary" id="btnLoginSubmit" style="width: 100%; height: 40px; font-weight: 600;">
-            Sign In
+          <button type="submit" class="btn btn-primary" id="btnLoginSubmit" style="width: 100%; height: 42px; font-weight: 600;">
+            Sign In & Access Dashboard
           </button>
 
           <p class="text-xs text-muted" style="text-align: center; margin-top: 14px;">
             Don't have an account? <a href="javascript:void(0)" onclick="switchAuthTab('register')" style="color: var(--primary); font-weight: 600;">Register now</a>
-          </p>
-        </form>
-
-        <!-- FORM 2: REGISTER -->
-        <form id="registerForm" onsubmit="handleRegisterSubmit(event)" style="display: none;">
-          <div class="form-group">
-            <label class="form-label" for="registerFullName">Full Name</label>
-            <input type="text" class="form-control" id="registerFullName" placeholder="e.g. Rajesh Sharma" required autocomplete="name">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="registerEmail">Email Address</label>
-            <input type="email" class="form-control" id="registerEmail" placeholder="e.g. rajesh@stocksense.com" required autocomplete="email">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="registerRole">Role</label>
-            <select class="form-control" id="registerRole">
-              <option value="inventory_manager">Inventory Manager</option>
-              <option value="warehouse_staff">Warehouse Staff</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="registerPassword">Password</label>
-            <div style="position: relative;">
-              <input type="password" class="form-control" id="registerPassword" placeholder="Create a secure password" required minlength="4" autocomplete="new-password">
-              <button type="button" onclick="togglePasswordVisibility('registerPassword', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 0.85rem;">👁</button>
-            </div>
-          </div>
-
-          <button type="submit" class="btn btn-primary" id="btnRegisterSubmit" style="width: 100%; height: 40px; font-weight: 600;">
-            Create Account
-          </button>
-
-          <p class="text-xs text-muted" style="text-align: center; margin-top: 14px;">
-            Already have an account? <a href="javascript:void(0)" onclick="switchAuthTab('login')" style="color: var(--primary); font-weight: 600;">Sign in here</a>
           </p>
         </form>
 

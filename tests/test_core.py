@@ -59,6 +59,49 @@ def test_auth_login():
     assert "token" in data
     assert data["user"]["role"] == "inventory_manager"
 
+def test_auth_register_and_reset_flow():
+    # 1. Register new user
+    reg_res = client.post("/api/auth/register", json={
+        "full_name": "Test User",
+        "email": "testuser@stocksense.com",
+        "password": "initialpassword",
+        "role": "warehouse_staff"
+    })
+    assert reg_res.status_code == 200
+    reg_data = reg_res.json()
+    assert "user" in reg_data
+    assert reg_data["user"]["email"] == "testuser@stocksense.com"
+    
+    # 2. Login with registered user
+    login_res = client.post("/api/auth/login", json={
+        "email": "testuser@stocksense.com",
+        "password": "initialpassword"
+    })
+    assert login_res.status_code == 200
+    assert "token" in login_res.json()
+    
+    # 3. Request OTP code
+    otp_res = client.post("/api/auth/request-otp", json={"email": "testuser@stocksense.com"})
+    assert otp_res.status_code == 200
+    otp_preview = otp_res.json()["otp_preview"]
+    assert len(otp_preview) == 6
+    
+    # 4. Reset password
+    reset_res = client.post("/api/auth/reset-password", json={
+        "email": "testuser@stocksense.com",
+        "otp": otp_preview,
+        "new_password": "newpassword123"
+    })
+    assert reset_res.status_code == 200
+    assert "message" in reset_res.json()
+    
+    # 5. Login with new password
+    new_login_res = client.post("/api/auth/login", json={
+        "email": "testuser@stocksense.com",
+        "password": "newpassword123"
+    })
+    assert new_login_res.status_code == 200
+
 def test_document_state_machine():
     db = TestingSessionLocal()
     vendor_loc = db.query(Location).filter(Location.full_path == "Vendors/Incoming").first()

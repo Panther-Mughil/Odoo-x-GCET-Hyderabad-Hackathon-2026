@@ -486,6 +486,11 @@ const store = new StockSenseStore();
 let activePage = 'dashboard';
 
 function navigate(pageId) {
+  if (typeof AuthManager !== 'undefined' && !AuthManager.isLoggedIn()) {
+    openAuthModal('register', true);
+    return;
+  }
+
   activePage = pageId;
   if (window.location.hash !== '#' + pageId) {
     history.replaceState(null, null, '#' + pageId);
@@ -1773,6 +1778,10 @@ function openModal(modalId) {
 }
 
 function closeModal(modalId) {
+  if (modalId === 'authModal' && !AuthManager.isLoggedIn()) {
+    showToast('Please register or sign in to access your inventory.', 'warning');
+    return;
+  }
   if (modalId === 'barcodeScannerModal') {
     stopModalCameraScanner();
   }
@@ -1780,9 +1789,22 @@ function closeModal(modalId) {
   if (modal) modal.classList.remove('open');
 }
 
+function closeAuthModal() {
+  if (!AuthManager.isLoggedIn()) {
+    showToast('Please register or sign in to access your inventory.', 'warning');
+    return;
+  }
+  const modal = document.getElementById('authModal');
+  if (modal) modal.classList.remove('open');
+}
+
 // Close modal when clicking backdrop
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('modal-backdrop')) {
+    if (e.target.id === 'authModal' && !AuthManager.isLoggedIn()) {
+      // Keep auth modal open until authenticated
+      return;
+    }
     if (e.target.id === 'barcodeScannerModal') {
       stopModalCameraScanner();
     }
@@ -1833,7 +1855,7 @@ function handleGlobalSearch(query) {
 }
 
 // ==========================================================================
-// 15. Authentication System (Login, Register, OTP Password Reset, Session)
+// 15. Authentication System (Register First, Login, OTP Reset, Session)
 // ==========================================================================
 
 const AuthManager = {
@@ -1842,6 +1864,10 @@ const AuthManager = {
 
   init() {
     this.updateSidebarUI();
+    if (!this.isLoggedIn()) {
+      // Force Register / Auth gate on first load
+      openAuthModal('register', true);
+    }
   },
 
   getCurrentUser() {
@@ -1849,21 +1875,15 @@ const AuthManager = {
       const saved = localStorage.getItem(this.USER_KEY);
       if (saved) return JSON.parse(saved);
     } catch (e) {}
-    // Default logged in demo manager
-    return {
-      id: 1,
-      email: 'manager@stocksense.com',
-      full_name: 'Rajesh Sharma',
-      role: 'inventory_manager'
-    };
+    return null;
   },
 
   getToken() {
-    return localStorage.getItem(this.TOKEN_KEY) || 'bearer-1-inventory_manager';
+    return localStorage.getItem(this.TOKEN_KEY) || null;
   },
 
   isLoggedIn() {
-    return !!localStorage.getItem(this.TOKEN_KEY);
+    return !!localStorage.getItem(this.TOKEN_KEY) && !!localStorage.getItem(this.USER_KEY);
   },
 
   setUserSession(user, token) {
@@ -1887,9 +1907,9 @@ const AuthManager = {
 
     if (!user) {
       if (avatarEl) avatarEl.textContent = '?';
-      if (nameEl) nameEl.textContent = 'Guest User';
-      if (roleEl) roleEl.textContent = 'Click to Sign In';
-      if (logoutBtn) logoutBtn.title = 'Sign In';
+      if (nameEl) nameEl.textContent = 'Not Signed In';
+      if (roleEl) roleEl.textContent = 'Click to Register / Sign In';
+      if (logoutBtn) logoutBtn.title = 'Sign In / Register';
       return;
     }
 
@@ -1924,8 +1944,14 @@ const AuthManager = {
       }
 
       this.setUserSession(data.user, data.token);
-      closeModal('authModal');
+      
+      const modal = document.getElementById('authModal');
+      if (modal) modal.classList.remove('open');
+      const closeBtn = document.getElementById('authModalCloseBtn');
+      if (closeBtn) closeBtn.style.display = 'block';
+
       showToast(`Welcome back, ${data.user.full_name}!`, 'success');
+      navigate('dashboard');
       return true;
     } catch (err) {
       showToast(err.message || 'Login failed', 'danger');
@@ -1950,7 +1976,7 @@ const AuthManager = {
         throw new Error(data.detail || 'Registration failed');
       }
 
-      showToast('Registration successful! Signing in...', 'success');
+      showToast('Registration successful! Logging into dashboard...', 'success');
       // Auto-login newly registered account
       await this.login(email, password);
       return true;
@@ -2025,13 +2051,17 @@ const AuthManager = {
 
   logout() {
     this.clearUserSession();
-    showToast('Logged out successfully.', 'info');
-    openAuthModal('login');
+    showToast('Logged out successfully. Please register or sign in.', 'info');
+    openAuthModal('register', true);
   }
 };
 
-function openAuthModal(tab = 'login') {
+function openAuthModal(tab = 'register', forced = false) {
   switchAuthTab(tab);
+  const closeBtn = document.getElementById('authModalCloseBtn');
+  if (closeBtn) {
+    closeBtn.style.display = (AuthManager.isLoggedIn() && !forced) ? 'block' : 'none';
+  }
   openModal('authModal');
 }
 
@@ -2041,7 +2071,7 @@ function handleAuthAction() {
       AuthManager.logout();
     }
   } else {
-    openAuthModal('login');
+    openAuthModal('register', true);
   }
 }
 
@@ -2065,19 +2095,32 @@ function switchAuthTab(tab) {
   if (regForm) regForm.style.display = tab === 'register' ? 'block' : 'none';
   if (resetForm) resetForm.style.display = tab === 'reset' ? 'block' : 'none';
 
-  if (tab === 'login') {
+  if (tab === 'register') {
+    if (titleEl) titleEl.textContent = 'Create StockSense Account';
+    if (subtitleEl) subtitleEl.textContent = 'Register first to access your inventory dashboard';
+  } else if (tab === 'login') {
     if (titleEl) titleEl.textContent = 'Sign In to StockSense';
     if (subtitleEl) subtitleEl.textContent = 'Access real-time inventory operations';
-  } else if (tab === 'register') {
-    if (titleEl) titleEl.textContent = 'Create StockSense Account';
-    if (subtitleEl) subtitleEl.textContent = 'Set up your inventory profile';
   } else if (tab === 'reset') {
     if (titleEl) titleEl.textContent = 'Reset Account Password';
     if (subtitleEl) subtitleEl.textContent = 'Verify via 6-digit OTP code';
   }
 }
 
+function quickFillRegister(name, email, password, role) {
+  switchAuthTab('register');
+  const nInput = document.getElementById('registerFullName');
+  const eInput = document.getElementById('registerEmail');
+  const pInput = document.getElementById('registerPassword');
+  const rInput = document.getElementById('registerRole');
+  if (nInput) nInput.value = name;
+  if (eInput) eInput.value = email;
+  if (pInput) pInput.value = password;
+  if (rInput) rInput.value = role;
+}
+
 function quickFillLogin(email, password) {
+  switchAuthTab('login');
   const eInput = document.getElementById('loginEmail');
   const pInput = document.getElementById('loginPassword');
   if (eInput) eInput.value = email;
@@ -2110,7 +2153,7 @@ async function handleLoginSubmit(e) {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.textContent = 'Sign In';
+      btn.textContent = 'Sign In & Access Dashboard';
     }
   }
 }
@@ -2131,7 +2174,7 @@ async function handleRegisterSubmit(e) {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.textContent = 'Create Account';
+      btn.textContent = 'Create Account & Enter Dashboard';
     }
   }
 }
@@ -2182,7 +2225,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize Theme System
   ThemeManager.init();
 
-  // Initialize Auth System
+  // Initialize Auth System (prompts register first if not logged in)
   AuthManager.init();
 
   // Check hash on load
@@ -2215,10 +2258,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const deliveryForm = document.getElementById('createDeliveryForm');
   if (deliveryForm) deliveryForm.addEventListener('submit', handleCreateDeliverySubmit);
 
-  // Esc key closes modals
+  // Esc key closes modals (except forced auth modal)
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       document.querySelectorAll('.modal-backdrop.open').forEach(m => {
+        if (m.id === 'authModal' && !AuthManager.isLoggedIn()) {
+          return;
+        }
         if (m.id === 'barcodeScannerModal') {
           stopModalCameraScanner();
         }
