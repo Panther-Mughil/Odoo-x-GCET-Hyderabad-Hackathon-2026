@@ -1,19 +1,19 @@
 from sqlalchemy.orm import Session
 from app.models import Warehouse, Location, User, UserRole
-from app.routers.auth import hash_password
+from app.routers.auth import pwd_context
 
 def seed_database(db: Session):
     # 1. Seed initial users if none exist
     if not db.query(User).filter(User.email == "manager@stocksense.com").first():
         manager = User(
             email="manager@stocksense.com",
-            password=hash_password("admin"),
+            password=pwd_context.hash("admin"),
             full_name="Rajesh Sharma",
             role=UserRole.MANAGER,
         )
         staff = User(
             email="staff@stocksense.com",
-            password=hash_password("admin"),
+            password=pwd_context.hash("admin"),
             full_name="Priya Patel",
             role=UserRole.STAFF,
         )

@@ -8,7 +8,6 @@ from main import app
 from app.database import Base, get_db
 from app.models import Product, Location, Warehouse, User, UserRole, ProductCategory
 from app.services.seeder import seed_database
-from app.routers.auth import hash_password
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 engine = create_engine(
